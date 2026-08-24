@@ -2,6 +2,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -212,6 +213,32 @@ export default function DashboardPage() {
     [visibleTickets],
   );
 
+  const openAssetIssueCount = useMemo(() => {
+    const visibleAssetIds = new Set(
+      visibleAssets.map((asset) =>
+        asset.id.toUpperCase(),
+      ),
+    );
+
+    const affectedAssetIds = new Set(
+      visibleTickets
+        .filter(
+          (ticket) =>
+            ticket.status !== "Resolved" &&
+            ticket.status !== "Closed" &&
+            Boolean(ticket.assetId?.trim()) &&
+            visibleAssetIds.has(
+              ticket.assetId.toUpperCase(),
+            ),
+        )
+        .map((ticket) =>
+          ticket.assetId.toUpperCase(),
+        ),
+    );
+
+    return affectedAssetIds.size;
+  }, [visibleAssets, visibleTickets]);
+
   const assetDepartmentSummary =
     useMemo<SummaryItem[]>(() => {
       const counts = new Map<string, number>();
@@ -235,6 +262,54 @@ export default function DashboardPage() {
           (first, second) =>
             second.value - first.value,
         );
+    }, [visibleAssets]);
+
+  const assetStatusSummary =
+    useMemo<SummaryItem[]>(() => {
+      const statusOrder = [
+        "Assigned",
+        "Available",
+        "Active",
+        "Maintenance",
+      ];
+
+      const counts = new Map<string, number>();
+
+      visibleAssets.forEach((asset) => {
+        const status =
+          asset.status?.trim() || "Unknown";
+
+        counts.set(
+          status,
+          (counts.get(status) || 0) + 1,
+        );
+      });
+
+      const orderedItems = statusOrder
+        .map((status) => ({
+          label: status,
+          value: counts.get(status) || 0,
+        }))
+        .filter((item) => item.value > 0);
+
+      const knownStatuses = new Set(statusOrder);
+
+      const additionalItems = Array.from(
+        counts.entries(),
+      )
+        .filter(
+          ([status]) => !knownStatuses.has(status),
+        )
+        .map(([label, value]) => ({
+          label,
+          value,
+        }))
+        .sort(
+          (first, second) =>
+            second.value - first.value,
+        );
+
+      return [...orderedItems, ...additionalItems];
     }, [visibleAssets]);
 
   const ticketStatusSummary =
@@ -313,6 +388,31 @@ export default function DashboardPage() {
                 ? "Review your assigned assets and support ticket activity."
                 : "Monitor company assets, employee coverage, and IT helpdesk performance."}
             </p>
+
+            {isEmployee && (
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  href="/tickets/new"
+                  className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500"
+                >
+                  + New Ticket
+                </Link>
+
+                <Link
+                  href="/assets"
+                  className="rounded-xl border border-white/10 bg-zinc-900 px-5 py-3 text-sm font-semibold text-gray-200 transition hover:border-blue-500/50 hover:text-white"
+                >
+                  View My Assets
+                </Link>
+
+                <Link
+                  href="/tickets"
+                  className="rounded-xl border border-white/10 bg-zinc-900 px-5 py-3 text-sm font-semibold text-gray-200 transition hover:border-blue-500/50 hover:text-white"
+                >
+                  View My Tickets
+                </Link>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
@@ -337,11 +437,23 @@ export default function DashboardPage() {
             />
 
             <Card
-              icon="🎫"
-              title="Available"
-              value={availableCount.toString()}
-              detail="Ready for assignment"
-              accent="green"
+              icon={isEmployee ? "⚠️" : "✅"}
+              title={
+                isEmployee
+                  ? "Open Asset Issues"
+                  : "Available"
+              }
+              value={(
+                isEmployee
+                  ? openAssetIssueCount
+                  : availableCount
+              ).toString()}
+              detail={
+                isEmployee
+                  ? "Assets with unresolved tickets"
+                  : "Ready for assignment"
+              }
+              accent={isEmployee ? "red" : "green"}
             />
 
             <Card
@@ -397,11 +509,19 @@ export default function DashboardPage() {
             <AnalyticsPanel
               title={
                 isEmployee
-                  ? "My Assets by Department"
+                  ? "My Assets by Status"
                   : "Assets by Department"
               }
-              description="Distribution of visible assets across departments."
-              items={assetDepartmentSummary}
+              description={
+                isEmployee
+                  ? "Current status of your assigned assets."
+                  : "Distribution of visible assets across departments."
+              }
+              items={
+                isEmployee
+                  ? assetStatusSummary
+                  : assetDepartmentSummary
+              }
               emptyMessage="No asset data available."
             />
 

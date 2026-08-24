@@ -2,9 +2,19 @@
 
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
+
 import Sidebar from "../../../components/system/Sidebar";
+
 import { logActivity } from "@/lib/activityLogger";
 
 type Asset = {
@@ -35,6 +45,17 @@ type AssetHistoryRecord = {
   newStatus: string;
   changedBy: string;
   changedAt: string;
+};
+
+type UserRole =
+  | "IT Admin"
+  | "IT Support"
+  | "Employee";
+
+type CurrentUser = {
+  name: string;
+  email?: string;
+  role: UserRole;
 };
 
 const defaultAssets: Asset[] = [
@@ -80,17 +101,6 @@ const defaultAssets: Asset[] = [
   },
 ];
 
-type UserRole =
-  | "IT Admin"
-  | "IT Support"
-  | "Employee";
-
-type CurrentUser = {
-  name: string;
-  email?: string;
-  role: UserRole;
-};
-
 export default function EditAssetPage() {
   const router = useRouter();
   const params = useParams();
@@ -101,28 +111,60 @@ export default function EditAssetPage() {
     ? rawId[0]
     : String(rawId || "");
 
-  const [assetName, setAssetName] = useState("");
-  const [category, setCategory] = useState("");
-  const [department, setDepartment] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
-  const [status, setStatus] = useState("Available");
+  const [assetName, setAssetName] =
+    useState("");
 
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [allAssets, setAllAssets] = useState<Asset[]>([]);
+  const [category, setCategory] =
+    useState("");
 
-  const [originalAsset, setOriginalAsset] =
-    useState<Asset | null>(null);
+  const [department, setDepartment] =
+    useState("");
 
-  const [assetFound, setAssetFound] = useState(true);
+  const [assignedTo, setAssignedTo] =
+    useState("");
 
-  const [isAuthorized, setIsAuthorized] =
-    useState(false);
+  const [status, setStatus] =
+    useState("Available");
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [employees, setEmployees] =
+    useState<Employee[]>([]);
+
+  const [allEmployees, setAllEmployees] =
+    useState<Employee[]>([]);
+
+  const [allAssets, setAllAssets] =
+    useState<Asset[]>([]);
+
+  const [
+    originalAsset,
+    setOriginalAsset,
+  ] = useState<Asset | null>(null);
+
+  const [
+    assetFound,
+    setAssetFound,
+  ] = useState(true);
+
+  const [
+    isAuthorized,
+    setIsAuthorized,
+  ] = useState(false);
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
+
+  const [
+    currentUser,
+    setCurrentUser,
+  ] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     const savedCurrentUser =
-      window.localStorage.getItem("currentUser");
+      window.localStorage.getItem(
+        "currentUser",
+      );
 
     if (!savedCurrentUser) {
       router.replace("/login");
@@ -131,51 +173,71 @@ export default function EditAssetPage() {
 
     try {
       const parsedCurrentUser =
-        JSON.parse(savedCurrentUser) as CurrentUser;
+        JSON.parse(
+          savedCurrentUser,
+        ) as CurrentUser;
 
       if (
-        parsedCurrentUser.role !== "IT Admin" &&
-        parsedCurrentUser.role !== "IT Support"
+        parsedCurrentUser.role !==
+          "IT Admin" &&
+        parsedCurrentUser.role !==
+          "IT Support"
       ) {
         router.replace("/assets");
         return;
       }
 
+      setCurrentUser(
+        parsedCurrentUser,
+      );
+
       setIsAuthorized(true);
 
       const savedAssets = JSON.parse(
-        window.localStorage.getItem("assets") || "[]",
+        window.localStorage.getItem(
+          "assets",
+        ) || "[]",
       ) as Asset[];
 
-      const savedEmployees = JSON.parse(
-        window.localStorage.getItem("employees") || "[]",
-      ) as Employee[];
+      const savedEmployees =
+        JSON.parse(
+          window.localStorage.getItem(
+            "employees",
+          ) || "[]",
+        ) as Employee[];
 
-      const assetsMap = new Map<string, Asset>();
+      const assetsMap =
+        new Map<string, Asset>();
 
-      defaultAssets.forEach((asset) => {
-        assetsMap.set(
-          asset.id.toUpperCase(),
-          asset,
-        );
-      });
-
-      savedAssets.forEach((asset) => {
-        assetsMap.set(
-          asset.id.toUpperCase(),
-          asset,
-        );
-      });
-
-      const combinedAssets = Array.from(
-        assetsMap.values(),
+      defaultAssets.forEach(
+        (asset) => {
+          assetsMap.set(
+            asset.id.toUpperCase(),
+            asset,
+          );
+        },
       );
 
-      const selectedAsset = combinedAssets.find(
-        (asset) =>
-          asset.id.toUpperCase() ===
-          assetId.toUpperCase(),
+      savedAssets.forEach(
+        (asset) => {
+          assetsMap.set(
+            asset.id.toUpperCase(),
+            asset,
+          );
+        },
       );
+
+      const combinedAssets =
+        Array.from(
+          assetsMap.values(),
+        );
+
+      const selectedAsset =
+        combinedAssets.find(
+          (asset) =>
+            asset.id.toUpperCase() ===
+            assetId.toUpperCase(),
+        );
 
       if (!selectedAsset) {
         setAssetFound(false);
@@ -183,31 +245,83 @@ export default function EditAssetPage() {
         return;
       }
 
+      /*
+        Keep all employee records for matching
+        the asset's existing assignment.
+
+        Only active employees are available
+        for NEW assignments.
+      */
       const activeEmployees =
         savedEmployees.filter(
           (employee) =>
-            employee.status === "Active",
+            employee.status ===
+            "Active",
         );
 
       const matchedEmployee =
-        activeEmployees.find(
+        savedEmployees.find(
           (employee) =>
             employee.id ===
               selectedAsset.assignedTo ||
-            employee.name.toLowerCase() ===
-              selectedAsset.assignedTo.toLowerCase(),
+            employee.name
+              .trim()
+              .toLowerCase() ===
+              selectedAsset.assignedTo
+                .trim()
+                .toLowerCase(),
         );
 
-      setAllAssets(combinedAssets);
-      setEmployees(activeEmployees);
+      /*
+        IMPORTANT:
+        If the current assignment is not an
+        employee (example: Meeting Room A,
+        Security Team), preserve the raw value.
 
-      setAssetName(selectedAsset.name);
-      setCategory(selectedAsset.category);
-      setDepartment(selectedAsset.department);
-      setAssignedTo(matchedEmployee?.id || "");
-      setStatus(selectedAsset.status);
+        Previously this became an empty string
+        and accidentally changed the asset to
+        Unassigned when saving.
+      */
+      const initialAssignedValue =
+        matchedEmployee?.id ||
+        selectedAsset.assignedTo ||
+        "";
 
-      setOriginalAsset(selectedAsset);
+      setAllAssets(
+        combinedAssets,
+      );
+
+      setAllEmployees(
+        savedEmployees,
+      );
+
+      setEmployees(
+        activeEmployees,
+      );
+
+      setAssetName(
+        selectedAsset.name,
+      );
+
+      setCategory(
+        selectedAsset.category,
+      );
+
+      setDepartment(
+        selectedAsset.department,
+      );
+
+      setAssignedTo(
+        initialAssignedValue,
+      );
+
+      setStatus(
+        selectedAsset.status,
+      );
+
+      setOriginalAsset(
+        selectedAsset,
+      );
 
       setAssetFound(true);
     } catch (error) {
@@ -223,21 +337,66 @@ export default function EditAssetPage() {
   }, [assetId, router]);
 
   function handleEmployeeChange(
-    employeeId: string,
+    employeeValue: string,
   ) {
-    setAssignedTo(employeeId);
-
-    const selectedEmployee = employees.find(
-      (employee) =>
-        employee.id === employeeId,
+    setAssignedTo(
+      employeeValue,
     );
 
-    if (selectedEmployee) {
-      setDepartment(selectedEmployee.department);
-      setStatus("Assigned");
-    } else {
-      setDepartment("");
+    if (!employeeValue) {
+      /*
+        Unassign the asset, but DO NOT
+        automatically erase its department.
+
+        Department represents the asset's
+        owning/business department and can
+        remain even when no employee is
+        currently assigned.
+      */
       setStatus("Available");
+      return;
+    }
+
+    const selectedEmployee =
+      allEmployees.find(
+        (employee) =>
+          employee.id ===
+            employeeValue ||
+          employee.name
+            .trim()
+            .toLowerCase() ===
+            employeeValue
+              .trim()
+              .toLowerCase(),
+      );
+
+    if (selectedEmployee) {
+      setDepartment(
+        selectedEmployee.department,
+      );
+
+      setStatus("Assigned");
+      return;
+    }
+
+    /*
+      If it is a non-employee assignment
+      such as Meeting Room A or Security Team,
+      preserve the existing department and
+      assignment instead of wiping them.
+    */
+    if (
+      originalAsset &&
+      employeeValue ===
+        originalAsset.assignedTo
+    ) {
+      setDepartment(
+        originalAsset.department,
+      );
+
+      setStatus(
+        originalAsset.status,
+      );
     }
   }
 
@@ -248,31 +407,43 @@ export default function EditAssetPage() {
       return "Unassigned";
     }
 
-    const matchedEmployee = employees.find(
-      (employee) =>
-        employee.id === employeeValue ||
-        employee.name.toLowerCase() ===
-          employeeValue.toLowerCase(),
-    );
+    const matchedEmployee =
+      allEmployees.find(
+        (employee) =>
+          employee.id ===
+            employeeValue ||
+          employee.name
+            .trim()
+            .toLowerCase() ===
+            employeeValue
+              .trim()
+              .toLowerCase(),
+      );
 
-    return matchedEmployee?.name || employeeValue;
+    return (
+      matchedEmployee?.name ||
+      employeeValue
+    );
   }
 
   function getChangedBy() {
     const currentUserValue =
-      window.localStorage.getItem("currentUser");
+      window.localStorage.getItem(
+        "currentUser",
+      );
 
     if (!currentUserValue) {
       return "Admin";
     }
 
     try {
-      const parsedUser = JSON.parse(
-        currentUserValue,
-      ) as {
-        name?: string;
-        email?: string;
-      };
+      const parsedUser =
+        JSON.parse(
+          currentUserValue,
+        ) as {
+          name?: string;
+          email?: string;
+        };
 
       return (
         parsedUser.name ||
@@ -284,57 +455,112 @@ export default function EditAssetPage() {
     }
   }
 
+  function normalizeAssignment(
+    value: string,
+  ) {
+    if (!value) {
+      return "";
+    }
+
+    const matchedEmployee =
+      allEmployees.find(
+        (employee) =>
+          employee.id === value ||
+          employee.name
+            .trim()
+            .toLowerCase() ===
+            value
+              .trim()
+              .toLowerCase(),
+      );
+
+    return (
+      matchedEmployee?.id ||
+      value
+    );
+  }
+
   function createHistoryRecord(
     updatedAsset: Asset,
     assignmentChanged: boolean,
     statusChanged: boolean,
   ) {
-    if (!originalAsset || !isAuthorized) {
+    if (
+      !originalAsset ||
+      !isAuthorized
+    ) {
       return;
     }
 
     try {
-      const savedHistory = JSON.parse(
-        window.localStorage.getItem(
-          "assetHistory",
-        ) || "[]",
-      ) as AssetHistoryRecord[];
+      const savedHistory =
+        JSON.parse(
+          window.localStorage.getItem(
+            "assetHistory",
+          ) || "[]",
+        ) as AssetHistoryRecord[];
 
-      let action = "Asset information updated";
+      let action =
+        "Asset information updated";
 
-      if (assignmentChanged && statusChanged) {
-        action = "Assignment and status updated";
-      } else if (assignmentChanged) {
-        action = "Asset assignment updated";
-      } else if (statusChanged) {
-        action = "Asset status updated";
+      if (
+        assignmentChanged &&
+        statusChanged
+      ) {
+        action =
+          "Assignment and status updated";
+      } else if (
+        assignmentChanged
+      ) {
+        action =
+          "Asset assignment updated";
+      } else if (
+        statusChanged
+      ) {
+        action =
+          "Asset status updated";
       }
 
-      const historyRecord: AssetHistoryRecord = {
-        id:
-          typeof crypto !== "undefined" &&
-          typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `${Date.now()}-${updatedAsset.id}`,
+      const historyRecord: AssetHistoryRecord =
+        {
+          id:
+            typeof crypto !==
+              "undefined" &&
+            typeof crypto.randomUUID ===
+              "function"
+              ? crypto.randomUUID()
+              : `${Date.now()}-${updatedAsset.id}`,
 
-        assetId: updatedAsset.id,
-        assetName: updatedAsset.name,
-        action,
+          assetId:
+            updatedAsset.id,
 
-        previousAssignedTo: getEmployeeName(
-          originalAsset.assignedTo,
-        ),
+          assetName:
+            updatedAsset.name,
 
-        newAssignedTo: getEmployeeName(
-          updatedAsset.assignedTo,
-        ),
+          action,
 
-        previousStatus: originalAsset.status,
-        newStatus: updatedAsset.status,
+          previousAssignedTo:
+            getEmployeeName(
+              originalAsset.assignedTo,
+            ),
 
-        changedBy: getChangedBy(),
-        changedAt: new Date().toISOString(),
-      };
+          newAssignedTo:
+            getEmployeeName(
+              updatedAsset.assignedTo,
+            ),
+
+          previousStatus:
+            originalAsset.status,
+
+          newStatus:
+            updatedAsset.status,
+
+          changedBy:
+            getChangedBy(),
+
+          changedAt:
+            new Date().toISOString(),
+        };
 
       window.localStorage.setItem(
         "assetHistory",
@@ -362,24 +588,35 @@ export default function EditAssetPage() {
 
     const updatedAsset: Asset = {
       ...originalAsset,
-      name: assetName.trim(),
-      category: category.trim(),
-      department: department.trim(),
+
+      name:
+        assetName.trim(),
+
+      category:
+        category.trim(),
+
+      department:
+        department.trim(),
+
       assignedTo,
+
       status,
     };
 
-    const updatedAssets = allAssets.map(
-      (asset) =>
-        asset.id.toUpperCase() ===
-        assetId.toUpperCase()
-          ? updatedAsset
-          : asset,
-    );
+    const updatedAssets =
+      allAssets.map(
+        (asset) =>
+          asset.id.toUpperCase() ===
+          assetId.toUpperCase()
+            ? updatedAsset
+            : asset,
+      );
 
     window.localStorage.setItem(
       "assets",
-      JSON.stringify(updatedAssets),
+      JSON.stringify(
+        updatedAssets,
+      ),
     );
 
     logActivity(
@@ -388,27 +625,34 @@ export default function EditAssetPage() {
       `${updatedAsset.id} - ${updatedAsset.name}`,
     );
 
-    const originalAssignedEmployee =
-      employees.find(
-        (employee) =>
-          employee.id ===
-            originalAsset.assignedTo ||
-          employee.name.toLowerCase() ===
-            originalAsset.assignedTo.toLowerCase(),
+    /*
+      Compare normalized values so:
+      "Sarah Mohammed" and EMP-xxx
+      do not falsely count as two
+      different assignments.
+    */
+    const originalAssignedValue =
+      normalizeAssignment(
+        originalAsset.assignedTo,
       );
 
-    const originalAssignedValue =
-      originalAssignedEmployee?.id ||
-      originalAsset.assignedTo ||
-      "";
+    const newAssignedValue =
+      normalizeAssignment(
+        assignedTo,
+      );
 
     const assignmentChanged =
-      originalAssignedValue !== assignedTo;
+      originalAssignedValue !==
+      newAssignedValue;
 
     const statusChanged =
-      originalAsset.status !== status;
+      originalAsset.status !==
+      status;
 
-    if (assignmentChanged || statusChanged) {
+    if (
+      assignmentChanged ||
+      statusChanged
+    ) {
       createHistoryRecord(
         updatedAsset,
         assignmentChanged,
@@ -416,10 +660,15 @@ export default function EditAssetPage() {
       );
     }
 
-    router.push(`/assets/${assetId}`);
+    router.push(
+      `/assets/${assetId}`,
+    );
   }
 
-  if (isLoading || !isAuthorized) {
+  if (
+    isLoading ||
+    !isAuthorized
+  ) {
     return (
       <div className="flex min-h-screen bg-zinc-950 text-white">
         <Sidebar />
@@ -445,14 +694,16 @@ export default function EditAssetPage() {
             </h1>
 
             <p className="mt-4 text-gray-400">
-              No asset was found with the ID:{" "}
-              {assetId}
+              No asset was found with
+              the ID: {assetId}
             </p>
 
             <button
               type="button"
               onClick={() =>
-                router.push("/assets")
+                router.push(
+                  "/assets",
+                )
               }
               className="mt-6 rounded-xl bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
             >
@@ -463,6 +714,37 @@ export default function EditAssetPage() {
       </div>
     );
   }
+
+  /*
+    Is the current assignment represented
+    by one of the active employee options?
+  */
+  const currentAssignmentIsActiveEmployee =
+    employees.some(
+      (employee) =>
+        employee.id ===
+          assignedTo ||
+        employee.name
+          .trim()
+          .toLowerCase() ===
+          assignedTo
+            .trim()
+            .toLowerCase(),
+    );
+
+  /*
+    If the asset is currently assigned to
+    a room/team/inactive employee, show that
+    assignment as its own option so opening
+    Edit never silently resets it.
+  */
+  const showCurrentLegacyAssignment =
+    Boolean(assignedTo) &&
+    !currentAssignmentIsActiveEmployee;
+
+  const isITAdmin =
+    currentUser?.role ===
+    "IT Admin";
 
   return (
     <div className="flex min-h-screen bg-zinc-950 text-white">
@@ -485,6 +767,17 @@ export default function EditAssetPage() {
           onSubmit={handleSubmit}
           className="max-w-3xl space-y-6 rounded-2xl bg-zinc-900 p-8"
         >
+          {currentUser?.role ===
+            "IT Support" && (
+            <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
+              IT Support can manage
+              asset assignment and
+              operational status.
+              Core asset information is
+              controlled by IT Admin.
+            </div>
+          )}
+
           <div>
             <label className="mb-2 block text-sm font-medium">
               Asset Name
@@ -494,10 +787,19 @@ export default function EditAssetPage() {
               type="text"
               value={assetName}
               onChange={(event) =>
-                setAssetName(event.target.value)
+                setAssetName(
+                  event.target.value,
+                )
+              }
+              readOnly={
+                !isITAdmin
               }
               required
-              className="w-full rounded-xl bg-zinc-800 p-3 outline-none focus:ring-2 focus:ring-yellow-500"
+              className={`w-full rounded-xl bg-zinc-800 p-3 outline-none ${
+                isITAdmin
+                  ? "focus:ring-2 focus:ring-yellow-500"
+                  : "cursor-not-allowed text-gray-400"
+              }`}
             />
           </div>
 
@@ -510,10 +812,19 @@ export default function EditAssetPage() {
               type="text"
               value={category}
               onChange={(event) =>
-                setCategory(event.target.value)
+                setCategory(
+                  event.target.value,
+                )
+              }
+              readOnly={
+                !isITAdmin
               }
               required
-              className="w-full rounded-xl bg-zinc-800 p-3 outline-none focus:ring-2 focus:ring-yellow-500"
+              className={`w-full rounded-xl bg-zinc-800 p-3 outline-none ${
+                isITAdmin
+                  ? "focus:ring-2 focus:ring-yellow-500"
+                  : "cursor-not-allowed text-gray-400"
+              }`}
             />
           </div>
 
@@ -535,21 +846,46 @@ export default function EditAssetPage() {
                 Unassigned
               </option>
 
-              {employees.map((employee) => (
+              {showCurrentLegacyAssignment && (
                 <option
-                  key={employee.id}
-                  value={employee.id}
+                  value={
+                    assignedTo
+                  }
                 >
-                  {employee.name} —{" "}
-                  {employee.department}
+                  {getEmployeeName(
+                    assignedTo,
+                  )}{" "}
+                  — Current Assignment
                 </option>
-              ))}
+              )}
+
+              {employees.map(
+                (employee) => (
+                  <option
+                    key={
+                      employee.id
+                    }
+                    value={
+                      employee.id
+                    }
+                  >
+                    {
+                      employee.name
+                    }{" "}
+                    —{" "}
+                    {
+                      employee.department
+                    }
+                  </option>
+                ),
+              )}
             </select>
 
-            {employees.length === 0 && (
+            {employees.length ===
+              0 && (
               <p className="mt-2 text-sm text-gray-400">
-                No active employees are available.
-                Add an active employee first.
+                No active employees
+                are available.
               </p>
             )}
           </div>
@@ -576,7 +912,9 @@ export default function EditAssetPage() {
             <select
               value={status}
               onChange={(event) =>
-                setStatus(event.target.value)
+                setStatus(
+                  event.target.value,
+                )
               }
               className="w-full rounded-xl bg-zinc-800 p-3 outline-none focus:ring-2 focus:ring-yellow-500"
             >

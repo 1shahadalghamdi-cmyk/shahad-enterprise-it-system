@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import Sidebar from "@/app/components/system/Sidebar";
 import KPICard from "@/app/iam/components/KPICard";
@@ -9,9 +13,78 @@ import QuickAction from "@/app/iam/components/QuickAction";
 import RecentUsersTable from "@/app/iam/components/RecentUsersTable";
 import SectionHeader from "@/app/iam/components/SectionHeader";
 
-import { defaultIamUsers } from "@/lib/data/iamUsers";
+import {
+  defaultIamUsers,
+  type IamUser,
+} from "@/lib/data/iamUsers";
+
 import { defaultIamGroups } from "@/lib/data/iamGroups";
 import { defaultIamRoles } from "@/lib/data/iamRoles";
+
+const STORAGE_KEY = "iamUsers";
+
+type UserRole =
+  | "IT Admin"
+  | "IT Support"
+  | "Employee";
+
+type CurrentUser = {
+  name: string;
+  email: string;
+  role: UserRole;
+};
+
+function loadUsers(): IamUser[] {
+  if (typeof window === "undefined") {
+    return defaultIamUsers;
+  }
+
+  const savedUsers =
+    window.localStorage.getItem(STORAGE_KEY);
+
+  if (!savedUsers) {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(defaultIamUsers),
+    );
+
+    return defaultIamUsers;
+  }
+
+  try {
+    const parsedUsers =
+      JSON.parse(savedUsers) as IamUser[];
+
+    return Array.isArray(parsedUsers)
+      ? parsedUsers
+      : defaultIamUsers;
+  } catch {
+    return defaultIamUsers;
+  }
+}
+
+function loadCurrentUser(): CurrentUser | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const savedUser =
+    window.localStorage.getItem(
+      "currentUser",
+    );
+
+  if (!savedUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(
+      savedUser,
+    ) as CurrentUser;
+  } catch {
+    return null;
+  }
+}
 
 function daysUntil(dateValue: string) {
   const date = new Date(dateValue);
@@ -27,35 +100,51 @@ function daysUntil(dateValue: string) {
 }
 
 export default function IamDashboardPage() {
-  const metrics = useMemo(() => {
-    const totalUsers = defaultIamUsers.length;
+  const [users, setUsers] =
+    useState<IamUser[]>([]);
 
-    const activeUsers = defaultIamUsers.filter(
+  const [currentUser, setCurrentUser] =
+    useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    setUsers(loadUsers());
+    setCurrentUser(loadCurrentUser());
+  }, []);
+
+  const isAdmin =
+    currentUser?.role === "IT Admin";
+
+  const metrics = useMemo(() => {
+    const totalUsers = users.length;
+
+    const activeUsers = users.filter(
       (user) => user.status === "Active",
     ).length;
 
-    const lockedUsers = defaultIamUsers.filter(
+    const lockedUsers = users.filter(
       (user) => user.status === "Locked",
     ).length;
 
-    const disabledUsers = defaultIamUsers.filter(
+    const disabledUsers = users.filter(
       (user) => user.status === "Disabled",
     ).length;
 
-    const pendingUsers = defaultIamUsers.filter(
+    const pendingUsers = users.filter(
       (user) => user.status === "Pending",
     ).length;
 
-    const mfaEnabled = defaultIamUsers.filter(
-      (user) => user.mfaStatus === "Enabled",
+    const mfaEnabled = users.filter(
+      (user) =>
+        user.mfaStatus === "Enabled",
     ).length;
 
-    const mfaRequired = defaultIamUsers.filter(
-      (user) => user.mfaStatus === "Required",
+    const mfaRequired = users.filter(
+      (user) =>
+        user.mfaStatus === "Required",
     ).length;
 
-    const passwordsExpiring = defaultIamUsers.filter(
-      (user) => {
+    const passwordsExpiring =
+      users.filter((user) => {
         const remainingDays = daysUntil(
           user.passwordExpiry,
         );
@@ -64,8 +153,7 @@ export default function IamDashboardPage() {
           remainingDays >= 0 &&
           remainingDays <= 30
         );
-      },
-    ).length;
+      }).length;
 
     return {
       totalUsers,
@@ -77,18 +165,19 @@ export default function IamDashboardPage() {
       mfaRequired,
       passwordsExpiring,
     };
-  }, []);
+  }, [users]);
 
   const usersByDepartment = useMemo(() => {
     const departmentCounts =
-      defaultIamUsers.reduce<
-        Record<string, number>
-      >((counts, user) => {
-        counts[user.department] =
-          (counts[user.department] || 0) + 1;
+      users.reduce<Record<string, number>>(
+        (counts, user) => {
+          counts[user.department] =
+            (counts[user.department] || 0) + 1;
 
-        return counts;
-      }, {});
+          return counts;
+        },
+        {},
+      );
 
     return Object.entries(departmentCounts)
       .map(([department, count]) => ({
@@ -96,22 +185,26 @@ export default function IamDashboardPage() {
         count,
       }))
       .sort(
-        (firstDepartment, secondDepartment) =>
+        (
+          firstDepartment,
+          secondDepartment,
+        ) =>
           secondDepartment.count -
           firstDepartment.count,
       );
-  }, []);
+  }, [users]);
 
   const usersByRole = useMemo(() => {
     const roleCounts =
-      defaultIamUsers.reduce<
-        Record<string, number>
-      >((counts, user) => {
-        counts[user.role] =
-          (counts[user.role] || 0) + 1;
+      users.reduce<Record<string, number>>(
+        (counts, user) => {
+          counts[user.role] =
+            (counts[user.role] || 0) + 1;
 
-        return counts;
-      }, {});
+          return counts;
+        },
+        {},
+      );
 
     return Object.entries(roleCounts)
       .map(([role, count]) => ({
@@ -123,38 +216,84 @@ export default function IamDashboardPage() {
           secondRole.count -
           firstRole.count,
       );
-  }, []);
+  }, [users]);
 
-  const securityEvents = [
-    {
-      title: "Locked account detected",
-      description:
-        "Mona AlOtaibi requires account review and unlock action.",
-      severity: "High",
-      time: "12 minutes ago",
-    },
-    {
-      title: "MFA registration required",
-      description:
-        "Ahmed AlHarbi must complete MFA enrollment before access is approved.",
-      severity: "Medium",
-      time: "1 hour ago",
-    },
-    {
-      title: "Password expiring soon",
-      description:
-        "Three user passwords expire within the next 30 days.",
-      severity: "Medium",
-      time: "2 hours ago",
-    },
-    {
-      title: "Disabled account review",
-      description:
-        "Noor Ali has a disabled account pending offboarding verification.",
-      severity: "Low",
-      time: "Yesterday",
-    },
-  ];
+  const securityEvents = useMemo(() => {
+    const events: {
+      title: string;
+      description: string;
+      severity:
+        | "High"
+        | "Medium"
+        | "Low";
+      time: string;
+    }[] = [];
+
+    const lockedUser = users.find(
+      (user) =>
+        user.status === "Locked",
+    );
+
+    if (lockedUser) {
+      events.push({
+        title: "Locked account detected",
+        description: `${lockedUser.fullName} requires account review and unlock action.`,
+        severity: "High",
+        time: "12 minutes ago",
+      });
+    }
+
+    const mfaRequiredUser = users.find(
+      (user) =>
+        user.mfaStatus === "Required",
+    );
+
+    if (mfaRequiredUser) {
+      events.push({
+        title: "MFA registration required",
+        description: `${mfaRequiredUser.fullName} must complete MFA enrollment before access is approved.`,
+        severity: "Medium",
+        time: "1 hour ago",
+      });
+    }
+
+    if (metrics.passwordsExpiring > 0) {
+      events.push({
+        title: "Password expiring soon",
+        description: `${metrics.passwordsExpiring} user passwords expire within the next 30 days.`,
+        severity: "Medium",
+        time: "2 hours ago",
+      });
+    }
+
+    const disabledUser = users.find(
+      (user) =>
+        user.status === "Disabled",
+    );
+
+    if (disabledUser) {
+      events.push({
+        title: "Disabled account review",
+        description: `${disabledUser.fullName} has a disabled account pending offboarding verification.`,
+        severity: "Low",
+        time: "Yesterday",
+      });
+    }
+
+    return events;
+  }, [
+    metrics.passwordsExpiring,
+    users,
+  ]);
+
+  const mfaAdoption =
+    metrics.totalUsers > 0
+      ? Math.round(
+          (metrics.mfaEnabled /
+            metrics.totalUsers) *
+            100,
+        )
+      : 0;
 
   return (
     <main className="flex min-h-screen bg-zinc-950 text-white">
@@ -172,18 +311,21 @@ export default function IamDashboardPage() {
             </h1>
 
             <p className="mt-3 max-w-3xl text-gray-400">
-              Manage enterprise identities, account
-              lifecycle, groups, roles, MFA, password
-              security, and access governance.
+              Manage enterprise identities,
+              account lifecycle, groups, roles,
+              MFA, password security, and access
+              governance.
             </p>
           </div>
 
-          <Link
-            href="/iam/users/new"
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
-          >
-            + New User
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/iam/users/new"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
+            >
+              + New User
+            </Link>
+          )}
         </div>
 
         <section>
@@ -259,34 +401,36 @@ export default function IamDashboardPage() {
           </div>
         </section>
 
-        <section className="mt-10">
-          <SectionHeader
-            title="Quick Actions"
-            description="Common identity administration tasks."
-          />
-
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <QuickAction
-              title="+ Create User"
-              href="/iam/users/new"
+        {isAdmin && (
+          <section className="mt-10">
+            <SectionHeader
+              title="Quick Actions"
+              description="Common identity administration tasks."
             />
 
-            <QuickAction
-              title="+ Create Group"
-              href="/iam/groups"
-            />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <QuickAction
+                title="+ Create User"
+                href="/iam/users/new"
+              />
 
-            <QuickAction
-              title="Assign Role"
-              href="/iam/roles"
-            />
+              <QuickAction
+                title="+ Create Group"
+                href="/iam/groups/new"
+              />
 
-            <QuickAction
-              title="Reset Password"
-              href="/iam/password-policy"
-            />
-          </div>
-        </section>
+              <QuickAction
+                title="Assign Role"
+                href="/iam/roles"
+              />
+
+              <QuickAction
+                title="Reset Password"
+                href="/iam/password-policy"
+              />
+            </div>
+          </section>
+        )}
 
         <section className="mt-10 grid gap-6 xl:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-zinc-900 p-6">
@@ -298,11 +442,14 @@ export default function IamDashboardPage() {
             <div className="space-y-5">
               {usersByDepartment.map(
                 ({ department, count }) => {
-                  const percentage = Math.round(
-                    (count /
-                      defaultIamUsers.length) *
-                      100,
-                  );
+                  const percentage =
+                    users.length > 0
+                      ? Math.round(
+                          (count /
+                            users.length) *
+                            100,
+                        )
+                      : 0;
 
                   return (
                     <div key={department}>
@@ -376,34 +523,53 @@ export default function IamDashboardPage() {
             />
 
             <div className="space-y-4">
-              {securityEvents.map((event) => (
-                <div
-                  key={event.title}
-                  className="rounded-xl border border-white/10 bg-zinc-950 p-5"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="font-semibold">
-                          {event.title}
-                        </h3>
+              {securityEvents.map(
+                (event) => (
+                  <div
+                    key={event.title}
+                    className="rounded-xl border border-white/10 bg-zinc-950 p-5"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="font-semibold">
+                            {event.title}
+                          </h3>
 
-                        <SeverityBadge
-                          severity={event.severity}
-                        />
+                          <SeverityBadge
+                            severity={
+                              event.severity
+                            }
+                          />
+                        </div>
+
+                        <p className="mt-3 leading-7 text-gray-400">
+                          {
+                            event.description
+                          }
+                        </p>
                       </div>
 
-                      <p className="mt-3 leading-7 text-gray-400">
-                        {event.description}
+                      <p className="shrink-0 text-xs text-gray-600">
+                        {event.time}
                       </p>
                     </div>
-
-                    <p className="shrink-0 text-xs text-gray-600">
-                      {event.time}
-                    </p>
                   </div>
+                ),
+              )}
+
+              {securityEvents.length === 0 && (
+                <div className="rounded-xl border border-dashed border-white/10 bg-zinc-950 p-8 text-center">
+                  <p className="font-semibold text-green-400">
+                    No active security risks
+                  </p>
+
+                  <p className="mt-2 text-sm text-gray-500">
+                    No identity events currently
+                    require administrator review.
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -416,26 +582,28 @@ export default function IamDashboardPage() {
               <div className="mt-6 space-y-4">
                 <SummaryRow
                   label="Groups"
-                  value={defaultIamGroups.length}
+                  value={
+                    defaultIamGroups.length
+                  }
                 />
 
                 <SummaryRow
                   label="Roles"
-                  value={defaultIamRoles.length}
+                  value={
+                    defaultIamRoles.length
+                  }
                 />
 
                 <SummaryRow
                   label="Departments"
-                  value={usersByDepartment.length}
+                  value={
+                    usersByDepartment.length
+                  }
                 />
 
                 <SummaryRow
                   label="MFA Adoption"
-                  value={`${Math.round(
-                    (metrics.mfaEnabled /
-                      metrics.totalUsers) *
-                      100,
-                  )}%`}
+                  value={`${mfaAdoption}%`}
                 />
               </div>
             </div>
@@ -450,8 +618,9 @@ export default function IamDashboardPage() {
               </h2>
 
               <p className="mt-3 leading-7 text-gray-300">
-                Review new accounts, role assignments,
-                MFA enrollment, and privileged access.
+                Review new accounts, role
+                assignments, MFA enrollment,
+                and privileged access.
               </p>
 
               <Link

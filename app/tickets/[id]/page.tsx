@@ -886,13 +886,12 @@ export default function TicketDetailsPage() {
                 </p>
 
                 <h2 className="text-2xl font-semibold">
-                  Technician Notes & Comments
+                  Comments & Updates
                 </h2>
 
                 <p className="mt-2 text-sm text-gray-400">
-                  Add troubleshooting notes,
-                  updates, or communication related
-                  to this ticket.
+                  Add additional information, updates, or
+                  communication related to this ticket.
                 </p>
               </div>
 
@@ -920,7 +919,7 @@ export default function TicketDetailsPage() {
                       setCommentError("");
                     }
                   }}
-                  placeholder="Example: Checked the device remotely and asked the employee to restart it."
+                  placeholder="Example: Add more details, provide an update, or reply to the support team."
                   className="w-full resize-none rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-green-500"
                 />
 
@@ -989,8 +988,7 @@ export default function TicketDetailsPage() {
                     </p>
 
                     <p className="mt-2 text-sm text-gray-600">
-                      Add the first troubleshooting
-                      note above.
+                      Add the first comment or update above.
                     </p>
                   </div>
                 )}

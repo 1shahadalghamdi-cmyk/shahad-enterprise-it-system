@@ -10,6 +10,12 @@ const STORAGE_KEYS = {
   history: "assetHistory",
 } as const;
 
+const LEGACY_DELETED_ASSET_IDS_KEY =
+  "deletedAssetIds";
+
+const ASSET_STORAGE_MIGRATION_KEY =
+  "assetsStorageMigratedV2";
+
 export const ENTERPRISE_DATA_EVENT =
   "enterprise-data-updated";
 
@@ -62,18 +68,22 @@ export const defaultAssets: Asset[] = [
   },
 ];
 
-export const defaultEmployees: Employee[] = [];
+export const defaultEmployees: Employee[] =
+  [];
 
-export const defaultTickets: Ticket[] = [];
+export const defaultTickets: Ticket[] =
+  [];
 
-export const defaultHistory: AssetHistoryRecord[] = [];
-///
+export const defaultHistory: AssetHistoryRecord[] =
+  [];
 
 function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
-function normalizeId(value: string): string {
+function normalizeId(
+  value: string,
+): string {
   return value.trim().toUpperCase();
 }
 
@@ -86,13 +96,15 @@ function readStorageArray<T>(
   }
 
   try {
-    const savedValue = window.localStorage.getItem(key);
+    const savedValue =
+      window.localStorage.getItem(key);
 
     if (!savedValue) {
       return fallback;
     }
 
-    const parsedValue: unknown = JSON.parse(savedValue);
+    const parsedValue: unknown =
+      JSON.parse(savedValue);
 
     if (!Array.isArray(parsedValue)) {
       return fallback;
@@ -124,7 +136,9 @@ function writeStorageArray<T>(
       JSON.stringify(value),
     );
 
-    dispatchEnterpriseDataUpdate(dataType);
+    dispatchEnterpriseDataUpdate(
+      dataType,
+    );
   } catch (error) {
     console.error(
       `Failed to save localStorage key "${key}":`,
@@ -133,21 +147,36 @@ function writeStorageArray<T>(
   }
 }
 
-function mergeById<T extends { id: string }>(
+function mergeById<
+  T extends { id: string },
+>(
   defaultItems: T[],
   savedItems: T[],
 ): T[] {
-  const itemsMap = new Map<string, T>();
+  const itemsMap =
+    new Map<string, T>();
 
-  defaultItems.forEach((item) => {
-    itemsMap.set(normalizeId(item.id), item);
-  });
+  defaultItems.forEach(
+    (item) => {
+      itemsMap.set(
+        normalizeId(item.id),
+        item,
+      );
+    },
+  );
 
-  savedItems.forEach((item) => {
-    itemsMap.set(normalizeId(item.id), item);
-  });
+  savedItems.forEach(
+    (item) => {
+      itemsMap.set(
+        normalizeId(item.id),
+        item,
+      );
+    },
+  );
 
-  return Array.from(itemsMap.values());
+  return Array.from(
+    itemsMap.values(),
+  );
 }
 
 function dispatchEnterpriseDataUpdate(
@@ -158,12 +187,16 @@ function dispatchEnterpriseDataUpdate(
   }
 
   window.dispatchEvent(
-    new CustomEvent(ENTERPRISE_DATA_EVENT, {
-      detail: {
-        dataType,
-        updatedAt: new Date().toISOString(),
+    new CustomEvent(
+      ENTERPRISE_DATA_EVENT,
+      {
+        detail: {
+          dataType,
+          updatedAt:
+            new Date().toISOString(),
+        },
       },
-    }),
+    ),
   );
 }
 
@@ -171,15 +204,132 @@ function dispatchEnterpriseDataUpdate(
    Assets
 ========================= */
 
-export function getAssets(): Asset[] {
-  const savedAssets = readStorageArray<Asset>(
+function migrateLegacyAssets(): Asset[] {
+  if (!isBrowser()) {
+    return defaultAssets;
+  }
+
+  const alreadyMigrated =
+    window.localStorage.getItem(
+      ASSET_STORAGE_MIGRATION_KEY,
+    ) === "true";
+
+  const savedAssets =
+    readStorageArray<Asset>(
+      STORAGE_KEYS.assets,
+    );
+
+  /*
+   * After migration, localStorage is
+   * the single source of truth.
+   */
+  if (alreadyMigrated) {
+    if (
+      window.localStorage.getItem(
+        STORAGE_KEYS.assets,
+      ) === null
+    ) {
+      window.localStorage.setItem(
+        STORAGE_KEYS.assets,
+        JSON.stringify(
+          defaultAssets,
+        ),
+      );
+
+      return defaultAssets;
+    }
+
+    return savedAssets;
+  }
+
+  /*
+   * Build the same list the old system
+   * previously displayed:
+   *
+   * defaults + saved data
+   */
+  const legacyMergedAssets =
+    mergeById(
+      defaultAssets,
+      savedAssets,
+    );
+
+  let deletedAssetIds: string[] =
+    [];
+
+  try {
+    deletedAssetIds =
+      JSON.parse(
+        window.localStorage.getItem(
+          LEGACY_DELETED_ASSET_IDS_KEY,
+        ) || "[]",
+      ) as string[];
+  } catch {
+    deletedAssetIds = [];
+  }
+
+  const deletedIds =
+    new Set(
+      deletedAssetIds.map(
+        (id) =>
+          normalizeId(id),
+      ),
+    );
+
+  /*
+   * Preserve exactly what the Assets
+   * page considered visible before
+   * migration.
+   */
+  const migratedAssets =
+    legacyMergedAssets.filter(
+      (asset) =>
+        !deletedIds.has(
+          normalizeId(asset.id),
+        ),
+    );
+
+  window.localStorage.setItem(
     STORAGE_KEYS.assets,
+    JSON.stringify(
+      migratedAssets,
+    ),
   );
 
-  return mergeById(defaultAssets, savedAssets);
+  /*
+   * The old workaround is no longer
+   * necessary after migration.
+   */
+  window.localStorage.removeItem(
+    LEGACY_DELETED_ASSET_IDS_KEY,
+  );
+
+  window.localStorage.setItem(
+    ASSET_STORAGE_MIGRATION_KEY,
+    "true",
+  );
+
+  return migratedAssets;
 }
 
-export function saveAssets(assets: Asset[]): void {
+export function getAssets(): Asset[] {
+  if (!isBrowser()) {
+    return defaultAssets;
+  }
+
+  return migrateLegacyAssets();
+}
+
+export function saveAssets(
+  assets: Asset[],
+): void {
+  if (isBrowser()) {
+    window.localStorage.setItem(
+      ASSET_STORAGE_MIGRATION_KEY,
+      "true",
+    );
+  }
+
   writeStorageArray(
     STORAGE_KEYS.assets,
     assets,
@@ -190,21 +340,27 @@ export function saveAssets(assets: Asset[]): void {
 export function getAssetById(
   assetId: string,
 ): Asset | undefined {
-  const normalizedAssetId = normalizeId(assetId);
+  const normalizedAssetId =
+    normalizeId(assetId);
 
   return getAssets().find(
     (asset) =>
-      normalizeId(asset.id) === normalizedAssetId,
+      normalizeId(asset.id) ===
+      normalizedAssetId,
   );
 }
 
-export function addAsset(asset: Asset): Asset[] {
+export function addAsset(
+  asset: Asset,
+): Asset[] {
   const assets = getAssets();
 
-  const alreadyExists = assets.some(
-    (item) =>
-      normalizeId(item.id) === normalizeId(asset.id),
-  );
+  const alreadyExists =
+    assets.some(
+      (item) =>
+        normalizeId(item.id) ===
+        normalizeId(asset.id),
+    );
 
   if (alreadyExists) {
     throw new Error(
@@ -212,7 +368,10 @@ export function addAsset(asset: Asset): Asset[] {
     );
   }
 
-  const updatedAssets = [...assets, asset];
+  const updatedAssets = [
+    ...assets,
+    asset,
+  ];
 
   saveAssets(updatedAssets);
 
@@ -223,17 +382,23 @@ export function updateAsset(
   assetId: string,
   updates: Partial<Asset>,
 ): Asset[] {
-  const normalizedAssetId = normalizeId(assetId);
+  const normalizedAssetId =
+    normalizeId(assetId);
 
-  const updatedAssets = getAssets().map((asset) =>
-    normalizeId(asset.id) === normalizedAssetId
-      ? {
-          ...asset,
-          ...updates,
-          id: updates.id ?? asset.id,
-        }
-      : asset,
-  );
+  const updatedAssets =
+    getAssets().map(
+      (asset) =>
+        normalizeId(asset.id) ===
+        normalizedAssetId
+          ? {
+              ...asset,
+              ...updates,
+              id:
+                updates.id ??
+                asset.id,
+            }
+          : asset,
+    );
 
   saveAssets(updatedAssets);
 
@@ -243,12 +408,15 @@ export function updateAsset(
 export function deleteAssetById(
   assetId: string,
 ): Asset[] {
-  const normalizedAssetId = normalizeId(assetId);
+  const normalizedAssetId =
+    normalizeId(assetId);
 
-  const updatedAssets = getAssets().filter(
-    (asset) =>
-      normalizeId(asset.id) !== normalizedAssetId,
-  );
+  const updatedAssets =
+    getAssets().filter(
+      (asset) =>
+        normalizeId(asset.id) !==
+        normalizedAssetId,
+    );
 
   saveAssets(updatedAssets);
 
@@ -260,11 +428,15 @@ export function deleteAssetById(
 ========================= */
 
 export function getEmployees(): Employee[] {
-  const savedEmployees = readStorageArray<Employee>(
-    STORAGE_KEYS.employees,
-  );
+  const savedEmployees =
+    readStorageArray<Employee>(
+      STORAGE_KEYS.employees,
+    );
 
-  return mergeById(defaultEmployees, savedEmployees);
+  return mergeById(
+    defaultEmployees,
+    savedEmployees,
+  );
 }
 
 export function saveEmployees(
@@ -280,7 +452,8 @@ export function saveEmployees(
 export function getEmployeeById(
   employeeId: string,
 ): Employee | undefined {
-  const normalizedEmployeeId = normalizeId(employeeId);
+  const normalizedEmployeeId =
+    normalizeId(employeeId);
 
   return getEmployees().find(
     (employee) =>
@@ -292,13 +465,15 @@ export function getEmployeeById(
 export function addEmployee(
   employee: Employee,
 ): Employee[] {
-  const employees = getEmployees();
+  const employees =
+    getEmployees();
 
-  const alreadyExists = employees.some(
-    (item) =>
-      normalizeId(item.id) ===
-      normalizeId(employee.id),
-  );
+  const alreadyExists =
+    employees.some(
+      (item) =>
+        normalizeId(item.id) ===
+        normalizeId(employee.id),
+    );
 
   if (alreadyExists) {
     throw new Error(
@@ -306,9 +481,14 @@ export function addEmployee(
     );
   }
 
-  const updatedEmployees = [...employees, employee];
+  const updatedEmployees = [
+    ...employees,
+    employee,
+  ];
 
-  saveEmployees(updatedEmployees);
+  saveEmployees(
+    updatedEmployees,
+  );
 
   return updatedEmployees;
 }
@@ -320,19 +500,26 @@ export function updateEmployee(
   const normalizedEmployeeId =
     normalizeId(employeeId);
 
-  const updatedEmployees = getEmployees().map(
-    (employee) =>
-      normalizeId(employee.id) ===
-      normalizedEmployeeId
-        ? {
-            ...employee,
-            ...updates,
-            id: updates.id ?? employee.id,
-          }
-        : employee,
-  );
+  const updatedEmployees =
+    getEmployees().map(
+      (employee) =>
+        normalizeId(
+          employee.id,
+        ) ===
+        normalizedEmployeeId
+          ? {
+              ...employee,
+              ...updates,
+              id:
+                updates.id ??
+                employee.id,
+            }
+          : employee,
+    );
 
-  saveEmployees(updatedEmployees);
+  saveEmployees(
+    updatedEmployees,
+  );
 
   return updatedEmployees;
 }
@@ -343,13 +530,18 @@ export function deleteEmployeeById(
   const normalizedEmployeeId =
     normalizeId(employeeId);
 
-  const updatedEmployees = getEmployees().filter(
-    (employee) =>
-      normalizeId(employee.id) !==
-      normalizedEmployeeId,
-  );
+  const updatedEmployees =
+    getEmployees().filter(
+      (employee) =>
+        normalizeId(
+          employee.id,
+        ) !==
+        normalizedEmployeeId,
+    );
 
-  saveEmployees(updatedEmployees);
+  saveEmployees(
+    updatedEmployees,
+  );
 
   return updatedEmployees;
 }
@@ -359,14 +551,20 @@ export function deleteEmployeeById(
 ========================= */
 
 export function getTickets(): Ticket[] {
-  const savedTickets = readStorageArray<Ticket>(
-    STORAGE_KEYS.tickets,
-  );
+  const savedTickets =
+    readStorageArray<Ticket>(
+      STORAGE_KEYS.tickets,
+    );
 
-  return mergeById(defaultTickets, savedTickets);
+  return mergeById(
+    defaultTickets,
+    savedTickets,
+  );
 }
 
-export function saveTickets(tickets: Ticket[]): void {
+export function saveTickets(
+  tickets: Ticket[],
+): void {
   writeStorageArray(
     STORAGE_KEYS.tickets,
     tickets,
@@ -377,40 +575,56 @@ export function saveTickets(tickets: Ticket[]): void {
 export function getTicketById(
   ticketId: string,
 ): Ticket | undefined {
-  const normalizedTicketId = normalizeId(ticketId);
+  const normalizedTicketId =
+    normalizeId(ticketId);
 
   return getTickets().find(
     (ticket) =>
-      normalizeId(ticket.id) === normalizedTicketId,
+      normalizeId(ticket.id) ===
+      normalizedTicketId,
   );
 }
 
 export function getTicketsByAssetId(
   assetId: string,
 ): Ticket[] {
-  const normalizedAssetId = normalizeId(assetId);
+  const normalizedAssetId =
+    normalizeId(assetId);
 
   return getTickets()
     .filter(
       (ticket) =>
-        normalizeId(ticket.assetId || "") ===
+        normalizeId(
+          ticket.assetId || "",
+        ) ===
         normalizedAssetId,
     )
     .sort(
-      (firstTicket, secondTicket) =>
-        new Date(secondTicket.createdAt).getTime() -
-        new Date(firstTicket.createdAt).getTime(),
+      (
+        firstTicket,
+        secondTicket,
+      ) =>
+        new Date(
+          secondTicket.createdAt,
+        ).getTime() -
+        new Date(
+          firstTicket.createdAt,
+        ).getTime(),
     );
 }
 
-export function addTicket(ticket: Ticket): Ticket[] {
-  const tickets = getTickets();
+export function addTicket(
+  ticket: Ticket,
+): Ticket[] {
+  const tickets =
+    getTickets();
 
-  const alreadyExists = tickets.some(
-    (item) =>
-      normalizeId(item.id) ===
-      normalizeId(ticket.id),
-  );
+  const alreadyExists =
+    tickets.some(
+      (item) =>
+        normalizeId(item.id) ===
+        normalizeId(ticket.id),
+    );
 
   if (alreadyExists) {
     throw new Error(
@@ -418,9 +632,14 @@ export function addTicket(ticket: Ticket): Ticket[] {
     );
   }
 
-  const updatedTickets = [...tickets, ticket];
+  const updatedTickets = [
+    ...tickets,
+    ticket,
+  ];
 
-  saveTickets(updatedTickets);
+  saveTickets(
+    updatedTickets,
+  );
 
   return updatedTickets;
 }
@@ -429,20 +648,31 @@ export function updateTicket(
   ticketId: string,
   updates: Partial<Ticket>,
 ): Ticket[] {
-  const normalizedTicketId = normalizeId(ticketId);
+  const normalizedTicketId =
+    normalizeId(ticketId);
 
-  const updatedTickets = getTickets().map((ticket) =>
-    normalizeId(ticket.id) === normalizedTicketId
-      ? {
-          ...ticket,
-          ...updates,
-          id: updates.id ?? ticket.id,
-          updatedAt: new Date().toISOString(),
-        }
-      : ticket,
+  const updatedTickets =
+    getTickets().map(
+      (ticket) =>
+        normalizeId(
+          ticket.id,
+        ) ===
+        normalizedTicketId
+          ? {
+              ...ticket,
+              ...updates,
+              id:
+                updates.id ??
+                ticket.id,
+              updatedAt:
+                new Date().toISOString(),
+            }
+          : ticket,
+    );
+
+  saveTickets(
+    updatedTickets,
   );
-
-  saveTickets(updatedTickets);
 
   return updatedTickets;
 }
@@ -450,14 +680,21 @@ export function updateTicket(
 export function deleteTicketById(
   ticketId: string,
 ): Ticket[] {
-  const normalizedTicketId = normalizeId(ticketId);
+  const normalizedTicketId =
+    normalizeId(ticketId);
 
-  const updatedTickets = getTickets().filter(
-    (ticket) =>
-      normalizeId(ticket.id) !== normalizedTicketId,
+  const updatedTickets =
+    getTickets().filter(
+      (ticket) =>
+        normalizeId(
+          ticket.id,
+        ) !==
+        normalizedTicketId,
+    );
+
+  saveTickets(
+    updatedTickets,
   );
-
-  saveTickets(updatedTickets);
 
   return updatedTickets;
 }
@@ -471,9 +708,16 @@ export function getHistory(): AssetHistoryRecord[] {
     STORAGE_KEYS.history,
     defaultHistory,
   ).sort(
-    (firstRecord, secondRecord) =>
-      new Date(secondRecord.changedAt).getTime() -
-      new Date(firstRecord.changedAt).getTime(),
+    (
+      firstRecord,
+      secondRecord,
+    ) =>
+      new Date(
+        secondRecord.changedAt,
+      ).getTime() -
+      new Date(
+        firstRecord.changedAt,
+      ).getTime(),
   );
 }
 
@@ -490,11 +734,14 @@ export function saveHistory(
 export function getHistoryByAssetId(
   assetId: string,
 ): AssetHistoryRecord[] {
-  const normalizedAssetId = normalizeId(assetId);
+  const normalizedAssetId =
+    normalizeId(assetId);
 
   return getHistory().filter(
     (record) =>
-      normalizeId(record.assetId) ===
+      normalizeId(
+        record.assetId,
+      ) ===
       normalizedAssetId,
   );
 }
@@ -502,11 +749,17 @@ export function getHistoryByAssetId(
 export function addHistoryRecord(
   record: AssetHistoryRecord,
 ): AssetHistoryRecord[] {
-  const history = getHistory();
+  const history =
+    getHistory();
 
-  const updatedHistory = [record, ...history];
+  const updatedHistory = [
+    record,
+    ...history,
+  ];
 
-  saveHistory(updatedHistory);
+  saveHistory(
+    updatedHistory,
+  );
 
   return updatedHistory;
 }
@@ -514,15 +767,21 @@ export function addHistoryRecord(
 export function deleteHistoryByAssetId(
   assetId: string,
 ): AssetHistoryRecord[] {
-  const normalizedAssetId = normalizeId(assetId);
+  const normalizedAssetId =
+    normalizeId(assetId);
 
-  const updatedHistory = getHistory().filter(
-    (record) =>
-      normalizeId(record.assetId) !==
-      normalizedAssetId,
+  const updatedHistory =
+    getHistory().filter(
+      (record) =>
+        normalizeId(
+          record.assetId,
+        ) !==
+        normalizedAssetId,
+    );
+
+  saveHistory(
+    updatedHistory,
   );
-
-  saveHistory(updatedHistory);
 
   return updatedHistory;
 }
@@ -553,11 +812,15 @@ export function refreshEnterpriseData(): void {
   }
 
   window.dispatchEvent(
-    new CustomEvent(ENTERPRISE_DATA_EVENT, {
-      detail: {
-        dataType: "all",
-        updatedAt: new Date().toISOString(),
+    new CustomEvent(
+      ENTERPRISE_DATA_EVENT,
+      {
+        detail: {
+          dataType: "all",
+          updatedAt:
+            new Date().toISOString(),
+        },
       },
-    }),
+    ),
   );
 }

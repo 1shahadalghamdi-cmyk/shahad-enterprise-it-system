@@ -136,6 +136,12 @@ export default function EditTicketPage() {
   const [currentUserName, setCurrentUserName] =
     useState("System User");
 
+  const [currentUserRole, setCurrentUserRole] =
+    useState<UserRole | null>(null);
+
+  const isAdmin = currentUserRole === "IT Admin";
+  const isSupport = currentUserRole === "IT Support";
+
   const [isAuthorized, setIsAuthorized] =
     useState(false);
 
@@ -173,6 +179,7 @@ export default function EditTicketPage() {
         "System User";
 
       setCurrentUserName(resolvedUserName);
+      setCurrentUserRole(parsedCurrentUser.role);
       setIsAuthorized(true);
     } catch {
       window.localStorage.removeItem("currentUser");
@@ -262,7 +269,7 @@ export default function EditTicketPage() {
       return;
     }
 
-    if (!assignedTo.trim()) {
+    if (isAdmin && !assignedTo.trim()) {
       setErrorMessage(
         "Assigned engineer is required.",
       );
@@ -279,11 +286,25 @@ export default function EditTicketPage() {
 
       const updatedTicket: Ticket = {
         ...originalTicket,
-        title: title.trim(),
-        description: description.trim(),
+
+        // Employee-submitted issue details are Admin-only to rewrite.
+        title: isAdmin
+          ? title.trim()
+          : originalTicket.title,
+
+        description: isAdmin
+          ? description.trim()
+          : originalTicket.description,
+
+        // IT Support can triage and progress the ticket.
         priority,
         status,
-        assignedTo: assignedTo.trim(),
+
+        // Assignment/reassignment is Admin-only.
+        assignedTo: isAdmin
+          ? assignedTo.trim()
+          : originalTicket.assignedTo,
+
         updatedAt: new Date().toISOString(),
       };
 
@@ -339,8 +360,9 @@ export default function EditTicketPage() {
       }
 
       if (
+        isAdmin &&
         originalTicket.assignedTo.trim() !==
-        assignedTo.trim()
+          assignedTo.trim()
       ) {
         newActivities.push(
           createActivity(
@@ -353,6 +375,7 @@ export default function EditTicketPage() {
       }
 
       if (
+        isAdmin &&
         originalTicket.title.trim() !== title.trim()
       ) {
         newActivities.push(
@@ -364,8 +387,9 @@ export default function EditTicketPage() {
       }
 
       if (
+        isAdmin &&
         (originalTicket.description || "").trim() !==
-        description.trim()
+          description.trim()
       ) {
         newActivities.push(
           createActivity(
@@ -481,6 +505,13 @@ export default function EditTicketPage() {
               </div>
             )}
 
+            {isSupport && (
+              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
+                IT Support can update ticket status and priority.
+                Issue details and engineer assignment are controlled by IT Admin.
+              </div>
+            )}
+
             <div>
               <label
                 htmlFor="title"
@@ -496,7 +527,8 @@ export default function EditTicketPage() {
                 onChange={(event) =>
                   setTitle(event.target.value)
                 }
-                className="w-full rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
+                readOnly={!isAdmin}
+                className="w-full rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500 read-only:cursor-not-allowed read-only:text-gray-500"
                 placeholder="Enter issue title"
               />
             </div>
@@ -583,7 +615,8 @@ export default function EditTicketPage() {
                 onChange={(event) =>
                   setAssignedTo(event.target.value)
                 }
-                className="w-full rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
+                readOnly={!isAdmin}
+                className="w-full rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500 read-only:cursor-not-allowed read-only:text-gray-500"
                 placeholder="Example: Shahad Alghamdi"
               />
             </div>
@@ -603,7 +636,8 @@ export default function EditTicketPage() {
                 onChange={(event) =>
                   setDescription(event.target.value)
                 }
-                className="w-full resize-none rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500"
+                readOnly={!isAdmin}
+                className="w-full resize-none rounded-xl border border-white/10 bg-zinc-950 px-4 py-3 text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500 read-only:cursor-not-allowed read-only:text-gray-500"
                 placeholder="Describe the issue"
               />
             </div>

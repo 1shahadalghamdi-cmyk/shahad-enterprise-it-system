@@ -1,34 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import Sidebar from "@/app/components/system/Sidebar";
 import KPICard from "@/app/iam/components/KPICard";
 import SectionHeader from "@/app/iam/components/SectionHeader";
+
 import {
   defaultIamUsers,
-  IamUser,
-  IamUserStatus,
+  type IamUser,
 } from "@/lib/data/iamUsers";
 
 import UsersFilters from "./components/UsersFilters";
 import UsersTable from "./components/UsersTable";
 
-const STORAGE_KEY = "iamUsers";
+const STORAGE_KEY =
+  "iamUsers";
+
+type UserRole =
+  | "IT Admin"
+  | "IT Support"
+  | "Employee";
+
+type CurrentUser = {
+  name: string;
+  email: string;
+  role: UserRole;
+};
 
 function loadUsers(): IamUser[] {
-  if (typeof window === "undefined") {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
     return defaultIamUsers;
   }
 
   const savedUsers =
-    window.localStorage.getItem(STORAGE_KEY);
+    window.localStorage.getItem(
+      STORAGE_KEY,
+    );
 
   if (!savedUsers) {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(defaultIamUsers),
+      JSON.stringify(
+        defaultIamUsers,
+      ),
     );
 
     return defaultIamUsers;
@@ -36,118 +59,437 @@ function loadUsers(): IamUser[] {
 
   try {
     const parsedUsers =
-      JSON.parse(savedUsers) as IamUser[];
+      JSON.parse(
+        savedUsers,
+      ) as IamUser[];
 
-    return Array.isArray(parsedUsers)
-      ? parsedUsers
-      : defaultIamUsers;
+    if (
+      !Array.isArray(
+        parsedUsers,
+      )
+    ) {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(
+          defaultIamUsers,
+        ),
+      );
+
+      return defaultIamUsers;
+    }
+
+    /*
+      Merge current default identities
+      with users already created in
+      localStorage.
+
+      Existing localStorage records win
+      when the same identity already
+      exists.
+    */
+    const usersMap =
+      new Map<
+        string,
+        IamUser
+      >();
+
+    defaultIamUsers.forEach(
+      (user) => {
+        usersMap.set(
+          user.id,
+          user,
+        );
+      },
+    );
+
+    parsedUsers.forEach(
+      (user) => {
+        usersMap.set(
+          user.id,
+          user,
+        );
+      },
+    );
+
+    /*
+      Fix the old USR-1009 collision.
+
+      Noura is now the default identity
+      USR-1009.
+
+      If an older user was created with
+      USR-1009 before Noura existed,
+      move that created user to the next
+      available ID instead of deleting
+      either identity.
+    */
+    const defaultNoura =
+      defaultIamUsers.find(
+        (user) =>
+          user.id ===
+          "USR-1009",
+      );
+
+    const storedCollision =
+      parsedUsers.find(
+        (user) =>
+          user.id ===
+            "USR-1009" &&
+          user.email.toLowerCase() !==
+            defaultNoura?.email.toLowerCase(),
+      );
+
+    if (
+      defaultNoura &&
+      storedCollision
+    ) {
+      usersMap.set(
+        defaultNoura.id,
+        defaultNoura,
+      );
+
+      const allUsers =
+        Array.from(
+          usersMap.values(),
+        );
+
+      const highestUserNumber =
+        allUsers.reduce(
+          (
+            highest,
+            user,
+          ) => {
+            const match =
+              user.id.match(
+                /^USR-(\d+)$/,
+              );
+
+            if (!match) {
+              return highest;
+            }
+
+            return Math.max(
+              highest,
+              Number(
+                match[1],
+              ),
+            );
+          },
+          1000,
+        );
+
+      const nextUserId =
+        `USR-${String(
+          highestUserNumber +
+            1,
+        ).padStart(
+          4,
+          "0",
+        )}`;
+
+      const highestEmployeeNumber =
+        allUsers.reduce(
+          (
+            highest,
+            user,
+          ) => {
+            const match =
+              user.employeeId.match(
+                /^EMP-(\d+)$/,
+              );
+
+            if (!match) {
+              return highest;
+            }
+
+            return Math.max(
+              highest,
+              Number(
+                match[1],
+              ),
+            );
+          },
+          0,
+        );
+
+      const nextEmployeeId =
+        `EMP-${String(
+          highestEmployeeNumber +
+            1,
+        ).padStart(
+          3,
+          "0",
+        )}`;
+
+      usersMap.set(
+        nextUserId,
+        {
+          ...storedCollision,
+          id: nextUserId,
+          employeeId:
+            nextEmployeeId,
+        },
+      );
+    }
+
+    const mergedUsers =
+      Array.from(
+        usersMap.values(),
+      ).sort(
+        (
+          firstUser,
+          secondUser,
+        ) => {
+          const firstNumber =
+            Number(
+              firstUser.id.replace(
+                "USR-",
+                "",
+              ),
+            );
+
+          const secondNumber =
+            Number(
+              secondUser.id.replace(
+                "USR-",
+                "",
+              ),
+            );
+
+          return (
+            firstNumber -
+            secondNumber
+          );
+        },
+      );
+
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(
+        mergedUsers,
+      ),
+    );
+
+    return mergedUsers;
   } catch {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(
+        defaultIamUsers,
+      ),
+    );
+
     return defaultIamUsers;
   }
 }
 
+function loadCurrentUser():
+  CurrentUser | null {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return null;
+  }
+
+  const savedUser =
+    window.localStorage.getItem(
+      "currentUser",
+    );
+
+  if (!savedUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(
+      savedUser,
+    ) as CurrentUser;
+  } catch {
+    return null;
+  }
+}
+
 export default function IamUsersPage() {
-  const [users, setUsers] =
+  const [
+    users,
+    setUsers,
+  ] =
     useState<IamUser[]>([]);
 
-  const [search, setSearch] = useState("");
-  const [status, setStatus] =
-    useState("All");
-  const [department, setDepartment] =
-    useState("All Departments");
-  const [role, setRole] =
-    useState("All Roles");
+  const [
+    currentUser,
+    setCurrentUser,
+  ] =
+    useState<CurrentUser | null>(
+      null,
+    );
+
+  const [
+    search,
+    setSearch,
+  ] =
+    useState("");
+
+  const [
+    status,
+    setStatus,
+  ] =
+    useState(
+      "All",
+    );
+
+  const [
+    department,
+    setDepartment,
+  ] =
+    useState(
+      "All Departments",
+    );
+
+  const [
+    role,
+    setRole,
+  ] =
+    useState(
+      "All Roles",
+    );
 
   useEffect(() => {
-    setUsers(loadUsers());
+    setUsers(
+      loadUsers(),
+    );
+
+    setCurrentUser(
+      loadCurrentUser(),
+    );
   }, []);
 
-  const departments = useMemo(() => {
-    return Array.from(
-      new Set(
-        users.map(
-          (user) => user.department,
+  const isAdmin =
+    currentUser?.role ===
+    "IT Admin";
+
+  const departments =
+    useMemo(() => {
+      return Array.from(
+        new Set(
+          users.map(
+            (user) =>
+              user.department,
+          ),
         ),
-      ),
-    ).sort();
-  }, [users]);
+      ).sort();
+    }, [users]);
 
-  const roles = useMemo(() => {
-    return Array.from(
-      new Set(
-        users.map((user) => user.role),
-      ),
-    ).sort();
-  }, [users]);
+  const roles =
+    useMemo(() => {
+      return Array.from(
+        new Set(
+          users.map(
+            (user) =>
+              user.role,
+          ),
+        ),
+      ).sort();
+    }, [users]);
 
-  const filteredUsers = useMemo(() => {
-    const normalizedSearch =
-      search.toLowerCase().trim();
-
-    return users.filter((user) => {
-      const matchesSearch =
-        normalizedSearch === "" ||
-        user.id
+  const filteredUsers =
+    useMemo(() => {
+      const normalizedSearch =
+        search
           .toLowerCase()
-          .includes(normalizedSearch) ||
-        user.employeeId
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        user.fullName
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        user.email
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        user.username
-          .toLowerCase()
-          .includes(normalizedSearch) ||
-        user.jobTitle
-          .toLowerCase()
-          .includes(normalizedSearch);
+          .trim();
 
-      const matchesStatus =
-        status === "All" ||
-        user.status === status;
+      return users.filter(
+        (user) => {
+          const matchesSearch =
+            normalizedSearch ===
+              "" ||
+            user.id
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              ) ||
+            user.employeeId
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              ) ||
+            user.fullName
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              ) ||
+            user.email
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              ) ||
+            user.username
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              ) ||
+            user.jobTitle
+              .toLowerCase()
+              .includes(
+                normalizedSearch,
+              );
 
-      const matchesDepartment =
-        department ===
-          "All Departments" ||
-        user.department === department;
+          const matchesStatus =
+            status ===
+              "All" ||
+            user.status ===
+              status;
 
-      const matchesRole =
-        role === "All Roles" ||
-        user.role === role;
+          const matchesDepartment =
+            department ===
+              "All Departments" ||
+            user.department ===
+              department;
 
-      return (
-        matchesSearch &&
-        matchesStatus &&
-        matchesDepartment &&
-        matchesRole
+          const matchesRole =
+            role ===
+              "All Roles" ||
+            user.role ===
+              role;
+
+          return (
+            matchesSearch &&
+            matchesStatus &&
+            matchesDepartment &&
+            matchesRole
+          );
+        },
       );
-    });
-  }, [
-    department,
-    role,
-    search,
-    status,
-    users,
-  ]);
+    }, [
+      department,
+      role,
+      search,
+      status,
+      users,
+    ]);
 
-  const activeUsers = users.filter(
-    (user) =>
-      user.status === "Active",
-  ).length;
+  const activeUsers =
+    users.filter(
+      (user) =>
+        user.status ===
+        "Active",
+    ).length;
 
-  const lockedUsers = users.filter(
-    (user) =>
-      user.status === "Locked",
-  ).length;
+  const lockedUsers =
+    users.filter(
+      (user) =>
+        user.status ===
+        "Locked",
+    ).length;
 
-  const disabledUsers = users.filter(
-    (user) =>
-      user.status === "Disabled",
-  ).length;
+  const disabledUsers =
+    users.filter(
+      (user) =>
+        user.status ===
+        "Disabled",
+    ).length;
 
   return (
     <main className="flex min-h-screen bg-zinc-950 text-white">
@@ -171,38 +513,48 @@ export default function IamUsersPage() {
             </p>
           </div>
 
-          <Link
-            href="/iam/users/new"
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
-          >
-            + New User
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/iam/users/new"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
+            >
+              + New User
+            </Link>
+          )}
         </div>
 
         <div className="mb-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <KPICard
             title="Total Users"
-            value={users.length}
+            value={
+              users.length
+            }
             subtitle="All identity records"
           />
 
           <KPICard
             title="Active"
-            value={activeUsers}
+            value={
+              activeUsers
+            }
             color="text-green-400"
             subtitle="Enabled accounts"
           />
 
           <KPICard
             title="Locked"
-            value={lockedUsers}
+            value={
+              lockedUsers
+            }
             color="text-red-400"
             subtitle="Requires unlock"
           />
 
           <KPICard
             title="Disabled"
-            value={disabledUsers}
+            value={
+              disabledUsers
+            }
             color="text-zinc-400"
             subtitle="Access blocked"
           />
@@ -216,23 +568,43 @@ export default function IamUsersPage() {
             />
 
             <UsersFilters
-              search={search}
-              status={status}
-              department={department}
-              role={role}
-              departments={departments}
-              roles={roles}
-              onSearchChange={setSearch}
-              onStatusChange={setStatus}
+              search={
+                search
+              }
+              status={
+                status
+              }
+              department={
+                department
+              }
+              role={
+                role
+              }
+              departments={
+                departments
+              }
+              roles={
+                roles
+              }
+              onSearchChange={
+                setSearch
+              }
+              onStatusChange={
+                setStatus
+              }
               onDepartmentChange={
                 setDepartment
               }
-              onRoleChange={setRole}
+              onRoleChange={
+                setRole
+              }
             />
           </div>
 
           <UsersTable
-            users={filteredUsers}
+            users={
+              filteredUsers
+            }
           />
         </section>
       </section>

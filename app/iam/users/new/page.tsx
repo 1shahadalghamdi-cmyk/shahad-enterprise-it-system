@@ -1,6 +1,10 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 
 import Sidebar from "@/app/components/system/Sidebar";
@@ -33,7 +37,9 @@ const roles = [
   "Employee",
 ];
 
-function normalizeUsername(value: string) {
+function normalizeUsername(
+  value: string,
+) {
   return value
     .toLowerCase()
     .trim()
@@ -42,91 +48,298 @@ function normalizeUsername(value: string) {
 }
 
 function loadUsers(): IamUser[] {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return defaultIamUsers;
+  }
+
   const savedUsers =
-    window.localStorage.getItem(STORAGE_KEY);
+    window.localStorage.getItem(
+      STORAGE_KEY,
+    );
 
   if (!savedUsers) {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(
+        defaultIamUsers,
+      ),
+    );
+
     return defaultIamUsers;
   }
 
   try {
     const parsedUsers =
-      JSON.parse(savedUsers) as IamUser[];
+      JSON.parse(
+        savedUsers,
+      ) as IamUser[];
 
-    return Array.isArray(parsedUsers)
-      ? parsedUsers
-      : defaultIamUsers;
+    if (
+      !Array.isArray(
+        parsedUsers,
+      )
+    ) {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(
+          defaultIamUsers,
+        ),
+      );
+
+      return defaultIamUsers;
+    }
+
+    /*
+      Merge default IAM users with
+      users created in localStorage.
+
+      This prevents newly-added default
+      identities such as Noura from
+      disappearing when an older
+      localStorage version already exists.
+    */
+    const usersMap =
+      new Map<
+        string,
+        IamUser
+      >();
+
+    defaultIamUsers.forEach(
+      (user) => {
+        usersMap.set(
+          user.id,
+          user,
+        );
+      },
+    );
+
+    parsedUsers.forEach(
+      (user) => {
+        usersMap.set(
+          user.id,
+          user,
+        );
+      },
+    );
+
+    const mergedUsers =
+      Array.from(
+        usersMap.values(),
+      );
+
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(
+        mergedUsers,
+      ),
+    );
+
+    return mergedUsers;
   } catch {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(
+        defaultIamUsers,
+      ),
+    );
+
     return defaultIamUsers;
   }
 }
 
 function generateNextId(
   users: IamUser[],
-  field: "id" | "employeeId",
+  field:
+    | "id"
+    | "employeeId",
   prefix: string,
 ) {
-  const highestNumber = users.reduce(
-    (highest, user) => {
-      const value = user[field];
-      const number = Number(
-        value.replace(`${prefix}-`, ""),
-      );
+  const highestNumber =
+    users.reduce(
+      (
+        highest,
+        user,
+      ) => {
+        const value =
+          user[field];
 
-      return Number.isNaN(number)
-        ? highest
-        : Math.max(highest, number);
-    },
-    1000,
-  );
+        const match =
+          value.match(
+            new RegExp(
+              `^${prefix}-(\\d+)$`,
+            ),
+          );
 
-  return `${prefix}-${highestNumber + 1}`;
+        if (!match) {
+          return highest;
+        }
+
+        const number =
+          Number(
+            match[1],
+          );
+
+        if (
+          Number.isNaN(
+            number,
+          )
+        ) {
+          return highest;
+        }
+
+        return Math.max(
+          highest,
+          number,
+        );
+      },
+      0,
+    );
+
+  const nextNumber =
+    highestNumber + 1;
+
+  if (
+    prefix ===
+    "USR"
+  ) {
+    return `USR-${String(
+      nextNumber,
+    ).padStart(
+      4,
+      "0",
+    )}`;
+  }
+
+  return `EMP-${String(
+    nextNumber,
+  ).padStart(
+    3,
+    "0",
+  )}`;
 }
 
 export default function CreateIamUserPage() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
-  const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [department, setDepartment] = useState(
-    "Information Technology",
-  );
-  const [jobTitle, setJobTitle] = useState("");
-  const [manager, setManager] = useState("");
-  const [role, setRole] = useState("Employee");
-  const [status, setStatus] =
-    useState<IamUserStatus>("Pending");
-  const [mfaStatus, setMfaStatus] =
-    useState<MfaStatus>("Required");
-  const [temporaryPassword, setTemporaryPassword] =
+  const [
+    fullName,
+    setFullName,
+  ] =
     useState("");
-  const [error, setError] = useState("");
 
-  const generatedUsername = useMemo(
-    () => normalizeUsername(fullName),
-    [fullName],
-  );
+  const [
+    username,
+    setUsername,
+  ] =
+    useState("");
+
+  const [
+    email,
+    setEmail,
+  ] =
+    useState("");
+
+  const [
+    department,
+    setDepartment,
+  ] =
+    useState(
+      "Information Technology",
+    );
+
+  const [
+    jobTitle,
+    setJobTitle,
+  ] =
+    useState("");
+
+  const [
+    manager,
+    setManager,
+  ] =
+    useState("");
+
+  const [
+    role,
+    setRole,
+  ] =
+    useState(
+      "Employee",
+    );
+
+  const [
+    status,
+    setStatus,
+  ] =
+    useState<IamUserStatus>(
+      "Pending",
+    );
+
+  const [
+    mfaStatus,
+    setMfaStatus,
+  ] =
+    useState<MfaStatus>(
+      "Required",
+    );
+
+  const [
+    temporaryPassword,
+    setTemporaryPassword,
+  ] =
+    useState("");
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+  const generatedUsername =
+    useMemo(
+      () =>
+        normalizeUsername(
+          fullName,
+        ),
+      [
+        fullName,
+      ],
+    );
 
   function handleGenerateIdentity() {
-    if (!fullName.trim()) {
+    if (
+      !fullName.trim()
+    ) {
       setError(
         "Enter the employee name before generating the identity.",
       );
+
       return;
     }
 
-    setUsername(generatedUsername);
+    setUsername(
+      generatedUsername,
+    );
+
     setEmail(
       `${generatedUsername}@enterprise.com`,
     );
 
     const randomPassword =
       `Temp@${Math.floor(
-        100000 + Math.random() * 900000,
+        100000 +
+          Math.random() *
+            900000,
       )}`;
 
-    setTemporaryPassword(randomPassword);
+    setTemporaryPassword(
+      randomPassword,
+    );
+
     setError("");
   }
 
@@ -134,79 +347,146 @@ export default function CreateIamUserPage() {
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
     setError("");
 
     if (
-      fullName.trim().length < 3 ||
-      username.trim().length < 3 ||
-      !email.includes("@") ||
-      jobTitle.trim().length < 2
+      fullName
+        .trim()
+        .length <
+        3 ||
+      username
+        .trim()
+        .length <
+        3 ||
+      !email.includes(
+        "@",
+      ) ||
+      jobTitle
+        .trim()
+        .length <
+        2
     ) {
       setError(
         "Complete the required identity and employment information.",
       );
+
       return;
     }
 
-    const users = loadUsers();
+    const users =
+      loadUsers();
 
-    const duplicateUsername = users.some(
-      (user) =>
-        user.username.toLowerCase() ===
-        username.trim().toLowerCase(),
-    );
+    const duplicateUsername =
+      users.some(
+        (user) =>
+          user.username.toLowerCase() ===
+          username
+            .trim()
+            .toLowerCase(),
+      );
 
-    const duplicateEmail = users.some(
-      (user) =>
-        user.email.toLowerCase() ===
-        email.trim().toLowerCase(),
-    );
+    const duplicateEmail =
+      users.some(
+        (user) =>
+          user.email.toLowerCase() ===
+          email
+            .trim()
+            .toLowerCase(),
+      );
 
-    if (duplicateUsername || duplicateEmail) {
+    if (
+      duplicateUsername ||
+      duplicateEmail
+    ) {
       setError(
         "The username or email address is already assigned.",
       );
+
       return;
     }
 
-    const now = new Date();
-    const passwordExpiry = new Date(now);
+    const now =
+      new Date();
+
+    const passwordExpiry =
+      new Date(
+        now,
+      );
 
     passwordExpiry.setDate(
-      passwordExpiry.getDate() + 90,
+      passwordExpiry.getDate() +
+        90,
     );
 
-    const newUser: IamUser = {
-      id: generateNextId(users, "id", "USR"),
-      employeeId: generateNextId(
-        users,
-        "employeeId",
-        "EMP",
-      ),
-      fullName: fullName.trim(),
-      email: email.trim().toLowerCase(),
-      username: username.trim().toLowerCase(),
-      department,
-      jobTitle: jobTitle.trim(),
-      manager:
-        manager.trim() || "Not Assigned",
-      role,
-      status,
-      mfaStatus,
-      lastLogin: "",
-      passwordExpiry:
-        passwordExpiry.toISOString(),
-      createdAt: now.toISOString(),
-    };
+    const newUser: IamUser =
+      {
+        id: generateNextId(
+          users,
+          "id",
+          "USR",
+        ),
 
-    const updatedUsers = [...users, newUser];
+        employeeId:
+          generateNextId(
+            users,
+            "employeeId",
+            "EMP",
+          ),
+
+        fullName:
+          fullName.trim(),
+
+        email:
+          email
+            .trim()
+            .toLowerCase(),
+
+        username:
+          username
+            .trim()
+            .toLowerCase(),
+
+        department,
+
+        jobTitle:
+          jobTitle.trim(),
+
+        manager:
+          manager.trim() ||
+          "Not Assigned",
+
+        role,
+
+        status,
+
+        mfaStatus,
+
+        lastLogin: "",
+
+        passwordExpiry:
+          passwordExpiry.toISOString(),
+
+        createdAt:
+          now.toISOString(),
+      };
+
+    const updatedUsers =
+      [
+        ...users,
+        newUser,
+      ];
 
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(updatedUsers),
+      JSON.stringify(
+        updatedUsers,
+      ),
     );
 
-    router.push(`/iam/users/${newUser.id}`);
+    router.push(
+      `/iam/users/${newUser.id}`,
+    );
   }
 
   return (
@@ -214,8 +494,11 @@ export default function CreateIamUserPage() {
       <Sidebar />
 
       <section className="min-w-0 flex-1 p-8">
+
         <div className="mx-auto max-w-5xl">
+
           <div className="mb-8">
+
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-500">
               Identity Provisioning
             </p>
@@ -226,220 +509,360 @@ export default function CreateIamUserPage() {
 
             <p className="mt-3 max-w-3xl text-gray-400">
               Provision a new enterprise identity,
-              assign employment information, configure
-              access status, and prepare MFA enrollment.
+              assign employment information,
+              configure access status, and
+              prepare MFA enrollment.
             </p>
+
           </div>
 
           <form
-            onSubmit={handleSubmit}
+            onSubmit={
+              handleSubmit
+            }
             className="space-y-6"
           >
+
             <section className="rounded-2xl border border-white/10 bg-zinc-900 p-6">
+
               <h2 className="text-xl font-semibold">
                 Identity Information
               </h2>
 
               <div className="mt-6 grid gap-5 md:grid-cols-2">
+
                 <Field label="Full Name">
+
                   <input
                     type="text"
-                    value={fullName}
-                    onChange={(event) => {
-                      setFullName(event.target.value);
+                    value={
+                      fullName
+                    }
+                    onChange={(
+                      event,
+                    ) => {
+                      setFullName(
+                        event
+                          .target
+                          .value,
+                      );
+
                       setError("");
                     }}
                     placeholder="Example: Ahmed AlHarbi"
                     className="input-style"
                     required
                   />
+
                 </Field>
 
                 <Field label="Username">
+
                   <input
                     type="text"
-                    value={username}
-                    onChange={(event) =>
-                      setUsername(event.target.value)
+                    value={
+                      username
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setUsername(
+                        event
+                          .target
+                          .value,
+                      )
                     }
                     placeholder="ahmed.alharbi"
                     className="input-style"
                     required
                   />
+
                 </Field>
 
                 <Field label="Enterprise Email">
+
                   <input
                     type="email"
-                    value={email}
-                    onChange={(event) =>
-                      setEmail(event.target.value)
+                    value={
+                      email
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setEmail(
+                        event
+                          .target
+                          .value,
+                      )
                     }
                     placeholder="ahmed.alharbi@enterprise.com"
                     className="input-style"
                     required
                   />
+
                 </Field>
 
                 <Field label="Temporary Password">
+
                   <input
                     type="text"
-                    value={temporaryPassword}
-                    onChange={(event) =>
+                    value={
+                      temporaryPassword
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setTemporaryPassword(
-                        event.target.value,
+                        event
+                          .target
+                          .value,
                       )
                     }
                     placeholder="Generate temporary password"
                     className="input-style"
                   />
+
                 </Field>
+
               </div>
 
               <button
                 type="button"
-                onClick={handleGenerateIdentity}
+                onClick={
+                  handleGenerateIdentity
+                }
                 className="mt-5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-5 py-3 font-semibold text-blue-400 transition hover:bg-blue-500/20"
               >
                 Generate Username, Email & Password
               </button>
+
             </section>
 
             <section className="rounded-2xl border border-white/10 bg-zinc-900 p-6">
+
               <h2 className="text-xl font-semibold">
                 Employment Information
               </h2>
 
               <div className="mt-6 grid gap-5 md:grid-cols-2">
+
                 <Field label="Department">
+
                   <select
-                    value={department}
-                    onChange={(event) =>
+                    value={
+                      department
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setDepartment(
-                        event.target.value,
+                        event
+                          .target
+                          .value,
                       )
                     }
                     className="input-style"
                   >
-                    {departments.map((item) => (
-                      <option
-                        key={item}
-                        value={item}
-                      >
-                        {item}
-                      </option>
-                    ))}
+
+                    {departments.map(
+                      (
+                        item,
+                      ) => (
+                        <option
+                          key={
+                            item
+                          }
+                          value={
+                            item
+                          }
+                        >
+                          {item}
+                        </option>
+                      ),
+                    )}
+
                   </select>
+
                 </Field>
 
                 <Field label="Job Title">
+
                   <input
                     type="text"
-                    value={jobTitle}
-                    onChange={(event) =>
-                      setJobTitle(event.target.value)
+                    value={
+                      jobTitle
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setJobTitle(
+                        event
+                          .target
+                          .value,
+                      )
                     }
                     placeholder="Example: IT Support Specialist"
                     className="input-style"
                     required
                   />
+
                 </Field>
 
                 <Field label="Manager">
+
                   <input
                     type="text"
-                    value={manager}
-                    onChange={(event) =>
-                      setManager(event.target.value)
+                    value={
+                      manager
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setManager(
+                        event
+                          .target
+                          .value,
+                      )
                     }
                     placeholder="Manager name"
                     className="input-style"
                   />
+
                 </Field>
 
                 <Field label="Assigned Role">
+
                   <select
-                    value={role}
-                    onChange={(event) =>
-                      setRole(event.target.value)
+                    value={
+                      role
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setRole(
+                        event
+                          .target
+                          .value,
+                      )
                     }
                     className="input-style"
                   >
-                    {roles.map((item) => (
-                      <option
-                        key={item}
-                        value={item}
-                      >
-                        {item}
-                      </option>
-                    ))}
+
+                    {roles.map(
+                      (
+                        item,
+                      ) => (
+                        <option
+                          key={
+                            item
+                          }
+                          value={
+                            item
+                          }
+                        >
+                          {item}
+                        </option>
+                      ),
+                    )}
+
                   </select>
+
                 </Field>
+
               </div>
+
             </section>
 
             <section className="rounded-2xl border border-white/10 bg-zinc-900 p-6">
+
               <h2 className="text-xl font-semibold">
                 Account Security
               </h2>
 
               <div className="mt-6 grid gap-5 md:grid-cols-2">
+
                 <Field label="Account Status">
+
                   <select
-                    value={status}
-                    onChange={(event) =>
+                    value={
+                      status
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setStatus(
-                        event.target
+                        event
+                          .target
                           .value as IamUserStatus,
                       )
                     }
                     className="input-style"
                   >
+
                     <option value="Pending">
                       Pending
                     </option>
+
                     <option value="Active">
                       Active
                     </option>
+
                     <option value="Locked">
                       Locked
                     </option>
+
                     <option value="Disabled">
                       Disabled
                     </option>
+
                   </select>
+
                 </Field>
 
                 <Field label="MFA Status">
+
                   <select
-                    value={mfaStatus}
-                    onChange={(event) =>
+                    value={
+                      mfaStatus
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setMfaStatus(
-                        event.target
+                        event
+                          .target
                           .value as MfaStatus,
                       )
                     }
                     className="input-style"
                   >
+
                     <option value="Required">
                       Required
                     </option>
+
                     <option value="Enabled">
                       Enabled
                     </option>
+
                     <option value="Disabled">
                       Disabled
                     </option>
+
                   </select>
+
                 </Field>
+
               </div>
 
               <div className="mt-6 rounded-xl border border-blue-500/20 bg-blue-500/5 p-5">
+
                 <p className="font-semibold text-blue-300">
                   Provisioning Summary
                 </p>
 
                 <div className="mt-4 grid gap-4 text-sm md:grid-cols-3">
+
                   <Summary
                     label="Username"
                     value={
@@ -451,15 +874,22 @@ export default function CreateIamUserPage() {
 
                   <Summary
                     label="Role"
-                    value={role}
+                    value={
+                      role
+                    }
                   />
 
                   <Summary
                     label="Initial Status"
-                    value={status}
+                    value={
+                      status
+                    }
                   />
+
                 </div>
+
               </div>
+
             </section>
 
             {error && (
@@ -469,6 +899,7 @@ export default function CreateIamUserPage() {
             )}
 
             <div className="flex flex-wrap gap-4">
+
               <button
                 type="submit"
                 className="rounded-xl bg-blue-600 px-7 py-3 font-semibold transition hover:bg-blue-500"
@@ -479,15 +910,21 @@ export default function CreateIamUserPage() {
               <button
                 type="button"
                 onClick={() =>
-                  router.push("/iam/users")
+                  router.push(
+                    "/iam/users",
+                  )
                 }
                 className="rounded-xl border border-white/10 bg-zinc-900 px-7 py-3 font-semibold transition hover:bg-zinc-800"
               >
                 Cancel
               </button>
+
             </div>
+
           </form>
+
         </div>
+
       </section>
 
       <style jsx>{`
@@ -502,9 +939,11 @@ export default function CreateIamUserPage() {
         }
 
         .input-style:focus {
-          border-color: rgb(59 130 246);
+          border-color:
+            rgb(59 130 246);
         }
       `}</style>
+
     </main>
   );
 }
@@ -514,15 +953,18 @@ function Field({
   children,
 }: {
   label: string;
-  children: React.ReactNode;
+  children:
+    React.ReactNode;
 }) {
   return (
     <label className="block">
+
       <span className="mb-2 block text-sm font-medium text-gray-300">
         {label}
       </span>
 
       {children}
+
     </label>
   );
 }
@@ -536,6 +978,7 @@ function Summary({
 }) {
   return (
     <div>
+
       <p className="text-gray-500">
         {label}
       </p>
@@ -543,6 +986,7 @@ function Summary({
       <p className="mt-1 font-semibold text-white">
         {value}
       </p>
+
     </div>
   );
 }

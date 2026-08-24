@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../components/system/Sidebar";
 import { useEnterpriseData } from "@/hooks/useEnterpriseData";
 import { logActivity } from "@/lib/activityLogger";
+import { hasPermission } from "@/lib/iam/permissions";
 
 type UserRole =
   | "IT Admin"
@@ -91,6 +92,26 @@ export default function MaintenancePage() {
   const [currentUser, setCurrentUser] =
     useState<CurrentUser | null>(null);
 
+  const canCreateMaintenance =
+    currentUser !== null &&
+    hasPermission(currentUser.role, "maintenance:create");
+
+  const canViewMaintenance =
+    currentUser !== null &&
+    hasPermission(currentUser.role, "maintenance:view");
+
+  const canEditMaintenance =
+    currentUser !== null &&
+    hasPermission(currentUser.role, "maintenance:edit");
+
+  const canCompleteMaintenance =
+    currentUser !== null &&
+    hasPermission(currentUser.role, "maintenance:complete");
+
+  const canDeleteMaintenance =
+    currentUser !== null &&
+    hasPermission(currentUser.role, "maintenance:delete");
+
   const [records, setRecords] =
     useState<MaintenanceRecord[]>([]);
 
@@ -128,8 +149,10 @@ export default function MaintenancePage() {
         JSON.parse(savedCurrentUser) as CurrentUser;
 
       if (
-        parsedUser.role !== "IT Admin" &&
-        parsedUser.role !== "IT Support"
+        !hasPermission(
+          parsedUser.role,
+          "maintenance:view",
+        )
       ) {
         router.replace("/dashboard");
         return;
@@ -285,6 +308,13 @@ export default function MaintenancePage() {
   }
 
   function openAddForm() {
+    if (!canCreateMaintenance) {
+      window.alert(
+        "You do not have permission to create maintenance records.",
+      );
+      return;
+    }
+
     setEditingRecordId(null);
     setForm({
       ...emptyForm,
@@ -300,6 +330,13 @@ export default function MaintenancePage() {
   function openEditForm(
     record: MaintenanceRecord,
   ) {
+    if (!canEditMaintenance) {
+      window.alert(
+        "You do not have permission to edit maintenance records.",
+      );
+      return;
+    }
+
     setEditingRecordId(record.id);
 
     setForm({
@@ -346,14 +383,17 @@ export default function MaintenancePage() {
       return;
     }
 
+    const hasAssignment = Boolean(
+      sourceAsset.assignedTo?.trim(),
+    );
+
     const newAssetStatus =
-      maintenanceStatus === "Completed"
-        ? "Available"
-        : maintenanceStatus === "Cancelled"
-          ? sourceAsset.assignedTo
-            ? "Assigned"
-            : "Available"
-          : "Maintenance";
+      maintenanceStatus === "Completed" ||
+      maintenanceStatus === "Cancelled"
+        ? hasAssignment
+          ? "Assigned"
+          : "Available"
+        : "Maintenance";
 
     const updatedAsset: Asset = {
       ...sourceAsset,
@@ -392,6 +432,26 @@ export default function MaintenancePage() {
     event.preventDefault();
 
     if (!currentUser) {
+      return;
+    }
+
+    if (
+      editingRecordId &&
+      !canEditMaintenance
+    ) {
+      setFormError(
+        "You do not have permission to edit maintenance records.",
+      );
+      return;
+    }
+
+    if (
+      !editingRecordId &&
+      !canCreateMaintenance
+    ) {
+      setFormError(
+        "You do not have permission to create maintenance records.",
+      );
       return;
     }
 
@@ -556,6 +616,13 @@ export default function MaintenancePage() {
       return;
     }
 
+    if (!canCompleteMaintenance) {
+      window.alert(
+        "You do not have permission to complete maintenance records.",
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
       `Mark ${record.id} as completed?`,
     );
@@ -602,6 +669,13 @@ export default function MaintenancePage() {
       return;
     }
 
+    if (!canDeleteMaintenance) {
+      window.alert(
+        "Only the IT Admin can delete maintenance records.",
+      );
+      return;
+    }
+
     const confirmed = window.confirm(
       `Are you sure you want to delete ${record.id}?`,
     );
@@ -625,7 +699,11 @@ export default function MaintenancePage() {
     );
   }
 
-  if (isLoading || !currentUser) {
+  if (
+    isLoading ||
+    !currentUser ||
+    !canViewMaintenance
+  ) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
         <p className="text-gray-400">
@@ -657,13 +735,15 @@ export default function MaintenancePage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={openAddForm}
-              className="rounded-xl bg-orange-500 px-6 py-3 font-semibold text-black transition hover:bg-orange-400"
-            >
-              + Add Maintenance
-            </button>
+            {canCreateMaintenance && (
+              <button
+                type="button"
+                onClick={openAddForm}
+                className="rounded-xl bg-orange-500 px-6 py-3 font-semibold text-black transition hover:bg-orange-400"
+              >
+                + Add Maintenance
+              </button>
+            )}
           </div>
 
           <div className="mb-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
@@ -1091,8 +1171,8 @@ export default function MaintenancePage() {
                         />
                       </td>
 
-                      <td className="px-4 py-5">
-                        <div className="flex flex-wrap gap-2">
+                      <td className="min-w-[230px] px-4 py-5">
+                        <div className="flex flex-nowrap items-center gap-2 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() =>
@@ -1103,18 +1183,21 @@ export default function MaintenancePage() {
                             View
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEditForm(record)
-                            }
-                            className="rounded-lg border border-yellow-500/40 px-4 py-2 text-sm text-yellow-400 transition hover:bg-yellow-500 hover:text-black"
-                          >
-                            Edit
-                          </button>
+                          {canEditMaintenance && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openEditForm(record)
+                              }
+                              className="rounded-lg border border-yellow-500/40 px-4 py-2 text-sm text-yellow-400 transition hover:bg-yellow-500 hover:text-black"
+                            >
+                              Edit
+                            </button>
+                          )}
 
-                          {record.status !==
-                            "Completed" &&
+                          {canCompleteMaintenance &&
+                            record.status !==
+                              "Completed" &&
                             record.status !==
                               "Cancelled" && (
                               <button
@@ -1130,17 +1213,19 @@ export default function MaintenancePage() {
                               </button>
                             )}
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              deleteMaintenance(
-                                record,
-                              )
-                            }
-                            className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-400 transition hover:bg-red-500 hover:text-white"
-                          >
-                            Delete
-                          </button>
+                          {canDeleteMaintenance && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                deleteMaintenance(
+                                  record,
+                                )
+                              }
+                              className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-400 transition hover:bg-red-500 hover:text-white"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1250,19 +1335,22 @@ export default function MaintenancePage() {
                 </div>
 
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedRecord(null);
-                      openEditForm(selectedRecord);
-                    }}
-                    className="rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-black transition hover:bg-yellow-400"
-                  >
-                    Edit Record
-                  </button>
+                  {canEditMaintenance && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedRecord(null);
+                        openEditForm(selectedRecord);
+                      }}
+                      className="rounded-xl bg-yellow-500 px-5 py-3 font-semibold text-black transition hover:bg-yellow-400"
+                    >
+                      Edit Record
+                    </button>
+                  )}
 
-                  {selectedRecord.status !==
-                    "Completed" &&
+                  {canCompleteMaintenance &&
+                    selectedRecord.status !==
+                      "Completed" &&
                     selectedRecord.status !==
                       "Cancelled" && (
                       <button
@@ -1411,4 +1499,3 @@ function StatusBadge({
     </span>
   );
 }
-

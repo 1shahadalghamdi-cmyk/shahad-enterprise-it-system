@@ -3,15 +3,36 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
+
+import Sidebar from "@/app/components/system/Sidebar";
+
+type UserRole =
+  | "IT Admin"
+  | "IT Support"
+  | "Employee";
+
+type CurrentUser = {
+  name: string;
+  email: string;
+  role: UserRole;
+};
 
 type Employee = {
   id: string;
   name: string;
   department: string;
   email: string;
-  status: "Active" | "Inactive";
+  status:
+    | "Active"
+    | "Inactive";
 };
 
 type Asset = {
@@ -27,226 +48,387 @@ export default function EmployeeDetailsPage() {
   const params = useParams();
   const router = useRouter();
 
-  const employeeId = params.id as string;
+  const employeeId =
+    Array.isArray(params.id)
+      ? params.id[0]
+      : (params.id as string);
 
-  const [employee, setEmployee] = useState<Employee | null>(null);
-  const [assignedAssets, setAssignedAssets] = useState<Asset[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [
+    currentUser,
+    setCurrentUser,
+  ] =
+    useState<CurrentUser | null>(
+      null,
+    );
+
+  const [
+    employee,
+    setEmployee,
+  ] =
+    useState<Employee | null>(
+      null,
+    );
+
+  const [
+    assignedAssets,
+    setAssignedAssets,
+  ] =
+    useState<Asset[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
 
   useEffect(() => {
-    const currentUser = localStorage.getItem("currentUser");
+    const savedCurrentUser =
+      window.localStorage.getItem(
+        "currentUser",
+      );
 
-    if (!currentUser) {
+    if (!savedCurrentUser) {
       router.replace("/login");
       return;
     }
 
-    const savedEmployees: Employee[] = JSON.parse(
-      localStorage.getItem("employees") || "[]"
-    );
+    try {
+      const parsedUser =
+        JSON.parse(
+          savedCurrentUser,
+        ) as CurrentUser;
 
-    const foundEmployee = savedEmployees.find(
-      (item) => item.id === employeeId
-    );
+      if (
+        parsedUser.role !==
+        "IT Admin"
+      ) {
+        router.replace(
+          "/dashboard",
+        );
+        return;
+      }
 
-    setEmployee(foundEmployee || null);
+      setCurrentUser(parsedUser);
 
-    const savedAssets: Asset[] = JSON.parse(
-      localStorage.getItem("assets") || "[]"
-    );
+      const savedEmployees =
+        JSON.parse(
+          window.localStorage.getItem(
+            "employees",
+          ) || "[]",
+        ) as Employee[];
 
-    const employeeAssets = savedAssets.filter(
-      (asset) =>
-        asset.assignedTo === employeeId ||
-        asset.assignedTo === foundEmployee?.name
-    );
+      const foundEmployee =
+        savedEmployees.find(
+          (item) =>
+            item.id === employeeId,
+        );
 
-    setAssignedAssets(employeeAssets);
-    setLoading(false);
+      setEmployee(
+        foundEmployee ?? null,
+      );
+
+      const savedAssets =
+        JSON.parse(
+          window.localStorage.getItem(
+            "assets",
+          ) || "[]",
+        ) as Asset[];
+
+      const employeeAssets =
+        savedAssets.filter(
+          (asset) =>
+            asset.assignedTo ===
+              employeeId ||
+            asset.assignedTo ===
+              foundEmployee?.name,
+        );
+
+      setAssignedAssets(
+        employeeAssets,
+      );
+
+      setLoading(false);
+    } catch {
+      window.localStorage.removeItem(
+        "currentUser",
+      );
+
+      router.replace("/login");
+    }
   }, [employeeId, router]);
 
-  if (loading) {
+  if (
+    loading ||
+    !currentUser
+  ) {
     return (
-      <main className="min-h-screen bg-slate-100 p-8">
-        <p className="text-slate-600">Loading employee...</p>
+      <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
+        <p className="text-gray-400">
+          Loading employee...
+        </p>
       </main>
     );
   }
 
   if (!employee) {
     return (
-      <main className="min-h-screen bg-slate-100 p-8">
-        <div className="mx-auto max-w-3xl rounded-xl bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-bold text-slate-900">
-            Employee not found
-          </h1>
+      <main className="flex min-h-screen bg-zinc-950 text-white">
+        <Sidebar />
 
-          <Link
-            href="/employees"
-            className="mt-5 inline-block font-medium text-blue-600 hover:underline"
-          >
-            Back to Employees
-          </Link>
-        </div>
+        <section className="flex flex-1 items-center justify-center p-8">
+          <div className="rounded-2xl border border-white/10 bg-zinc-900 p-8 text-center">
+            <p className="text-5xl">
+              🔎
+            </p>
+
+            <h1 className="mt-5 text-3xl font-bold">
+              Employee Not Found
+            </h1>
+
+            <p className="mt-3 text-gray-400">
+              This employee record does
+              not exist.
+            </p>
+
+            <Link
+              href="/employees"
+              className="mt-6 inline-flex rounded-xl border border-white/10 px-6 py-3 font-semibold transition hover:bg-zinc-800"
+            >
+              Back to Employees
+            </Link>
+          </div>
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 p-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <p className="mb-1 text-sm font-medium text-blue-600">
-              Employee Profile
-            </p>
+    <main className="flex min-h-screen bg-zinc-950 text-white">
+      <Sidebar />
 
-            <h1 className="text-3xl font-bold text-slate-900">
-              {employee.name}
-            </h1>
-
-            <p className="mt-1 text-slate-600">{employee.id}</p>
-          </div>
-
-          <div className="flex gap-3">
-            <Link
-              href="/employees"
-              className="rounded-lg border border-slate-300 bg-white px-5 py-3 font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Back
-            </Link>
-
-            <Link
-              href={`/employees/${employee.id}/edit`}
-              className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700"
-            >
-              Edit Employee
-            </Link>
-          </div>
-        </div>
-
-        <section className="mb-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">Employee ID</p>
-            <p className="mt-2 font-semibold text-slate-900">
-              {employee.id}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">Full Name</p>
-            <p className="mt-2 font-semibold text-slate-900">
-              {employee.name}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">Department</p>
-            <p className="mt-2 font-semibold text-slate-900">
-              {employee.department}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">Email</p>
-            <p className="mt-2 font-semibold text-slate-900">
-              {employee.email}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">Status</p>
-
-            <span
-              className={`mt-2 inline-block rounded-full px-3 py-1 text-sm font-medium ${
-                employee.status === "Active"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {employee.status}
-            </span>
-          </div>
-
-          <div className="rounded-xl bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">Assigned Assets</p>
-            <p className="mt-2 font-semibold text-slate-900">
-              {assignedAssets.length}
-            </p>
-          </div>
-        </section>
-
-        <section className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="mb-5">
-            <h2 className="text-xl font-bold text-slate-900">
-              Assigned IT Assets
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-600">
-              Devices currently assigned to this employee.
-            </p>
-          </div>
-
-          {assignedAssets.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
-              <p className="font-medium text-slate-700">
-                No assets assigned
+      <section className="min-w-0 flex-1 p-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-400">
+                Employee Profile
               </p>
 
-              <p className="mt-1 text-sm text-slate-500">
-                Asset assignment will appear here automatically.
+              <h1 className="mt-3 text-4xl font-bold">
+                {employee.name}
+              </h1>
+
+              <p className="mt-2 text-gray-400">
+                {employee.id}
               </p>
             </div>
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-slate-200">
-              <table className="w-full text-left">
-                <thead className="bg-slate-900 text-white">
-                  <tr>
-                    <th className="px-5 py-3">Asset ID</th>
-                    <th className="px-5 py-3">Asset</th>
-                    <th className="px-5 py-3">Category</th>
-                    <th className="px-5 py-3">Action</th>
-                  </tr>
-                </thead>
 
-                <tbody>
-                  {assignedAssets.map((asset) => (
-                    <tr
-                      key={asset.id}
-                      className="border-b border-slate-200 last:border-b-0"
-                    >
-                      <td className="px-5 py-4 font-medium text-slate-900">
-                        {asset.id}
-                      </td>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/employees"
+                className="rounded-xl border border-white/10 bg-zinc-900 px-5 py-3 font-semibold text-gray-300 transition hover:bg-zinc-800"
+              >
+                Back
+              </Link>
 
-                      <td className="px-5 py-4 text-slate-700">
-                        {asset.name ||
-                          [asset.brand, asset.model]
+              <Link
+                href={`/employees/${employee.id}/edit`}
+                className="rounded-xl bg-blue-600 px-5 py-3 font-semibold transition hover:bg-blue-500"
+              >
+                Edit Employee
+              </Link>
+            </div>
+          </div>
+
+          <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <InfoCard
+              title="Employee ID"
+              value={employee.id}
+            />
+
+            <InfoCard
+              title="Full Name"
+              value={employee.name}
+            />
+
+            <InfoCard
+              title="Department"
+              value={
+                employee.department
+              }
+            />
+
+            <InfoCard
+              title="Email"
+              value={employee.email}
+            />
+
+            <StatusCard
+              status={
+                employee.status
+              }
+            />
+
+            <InfoCard
+              title="Assigned Assets"
+              value={String(
+                assignedAssets.length,
+              )}
+            />
+          </section>
+
+          <section className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900">
+            <div className="border-b border-white/10 p-6">
+              <h2 className="text-2xl font-semibold">
+                Assigned IT Assets
+              </h2>
+
+              <p className="mt-2 text-gray-400">
+                Devices currently assigned
+                to this employee.
+              </p>
+            </div>
+
+            {assignedAssets.length ===
+            0 ? (
+              <div className="p-10 text-center">
+                <p className="font-semibold text-gray-300">
+                  No assets assigned
+                </p>
+
+                <p className="mt-2 text-sm text-gray-500">
+                  Asset assignment will
+                  appear here
+                  automatically.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px]">
+                  <thead className="border-b border-white/10 bg-zinc-950/40 text-left text-sm text-gray-400">
+                    <tr>
+                      <th className="px-6 py-4">
+                        Asset ID
+                      </th>
+
+                      <th className="px-4 py-4">
+                        Asset
+                      </th>
+
+                      <th className="px-4 py-4">
+                        Category
+                      </th>
+
+                      <th className="px-6 py-4 text-right">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-white/5">
+                    {assignedAssets.map(
+                      (asset) => {
+                        const assetName =
+                          asset.name ||
+                          [
+                            asset.brand,
+                            asset.model,
+                          ]
                             .filter(Boolean)
                             .join(" ") ||
-                          "IT Asset"}
-                      </td>
+                          "IT Asset";
 
-                      <td className="px-5 py-4 text-slate-700">
-                        {asset.category || "Not specified"}
-                      </td>
+                        return (
+                          <tr
+                            key={
+                              asset.id
+                            }
+                            className="transition hover:bg-white/[0.03]"
+                          >
+                            <td className="px-6 py-5 font-semibold text-blue-400">
+                              {
+                                asset.id
+                              }
+                            </td>
 
-                      <td className="px-5 py-4">
-                        <Link
-                          href={`/assets/${asset.id}`}
-                          className="font-medium text-blue-600 hover:underline"
-                        >
-                          View Asset
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
+                            <td className="px-4 py-5 text-gray-200">
+                              {
+                                assetName
+                              }
+                            </td>
+
+                            <td className="px-4 py-5 text-gray-300">
+                              {asset.category ||
+                                "Not specified"}
+                            </td>
+
+                            <td className="px-6 py-5">
+                              <div className="flex justify-end">
+                                <Link
+                                  href={`/assets/${asset.id}`}
+                                  className="rounded-lg border border-blue-500/30 px-3 py-2 text-sm font-semibold text-blue-400 transition hover:bg-blue-500/10"
+                                >
+                                  View Asset
+                                </Link>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      },
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
+      </section>
     </main>
+  );
+}
+
+function InfoCard({
+  title,
+  value,
+}: {
+  title: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-zinc-900 p-6">
+      <p className="text-sm text-gray-500">
+        {title}
+      </p>
+
+      <p className="mt-3 break-words font-semibold text-white">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function StatusCard({
+  status,
+}: {
+  status:
+    | "Active"
+    | "Inactive";
+}) {
+  const active =
+    status === "Active";
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-zinc-900 p-6">
+      <p className="text-sm text-gray-500">
+        Status
+      </p>
+
+      <span
+        className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${
+          active
+            ? "border-green-500/30 bg-green-500/10 text-green-400"
+            : "border-red-500/30 bg-red-500/10 text-red-400"
+        }`}
+      >
+        {status}
+      </span>
+    </div>
   );
 }

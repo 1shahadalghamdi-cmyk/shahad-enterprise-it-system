@@ -33,16 +33,25 @@ export default function UserDetailsPage() {
 
   useEffect(() => {
     const savedUsers =
-      window.localStorage.getItem(STORAGE_KEY);
+      window.localStorage.getItem(
+        STORAGE_KEY,
+      );
 
-    let users: IamUser[] = defaultIamUsers;
+    let users: IamUser[] =
+      defaultIamUsers;
 
     if (savedUsers) {
       try {
         const parsedUsers =
-          JSON.parse(savedUsers) as IamUser[];
+          JSON.parse(
+            savedUsers,
+          ) as IamUser[];
 
-        if (Array.isArray(parsedUsers)) {
+        if (
+          Array.isArray(
+            parsedUsers,
+          )
+        ) {
           users = parsedUsers;
         }
       } catch {
@@ -52,7 +61,8 @@ export default function UserDetailsPage() {
 
     const matchedUser =
       users.find(
-        (item) => item.id === userId,
+        (item) =>
+          item.id === userId,
       ) || null;
 
     setUser(matchedUser);
@@ -76,6 +86,7 @@ export default function UserDetailsPage() {
 
         <section className="flex flex-1 items-center justify-center p-8">
           <div className="text-center">
+
             <p className="text-5xl">
               🔎
             </p>
@@ -87,6 +98,7 @@ export default function UserDetailsPage() {
             <p className="mt-3 text-gray-400">
               The requested identity record does not exist.
             </p>
+
           </div>
         </section>
       </main>
@@ -98,21 +110,39 @@ export default function UserDetailsPage() {
       <Sidebar />
 
       <section className="min-w-0 flex-1 space-y-8 p-8">
-        <ProfileCard user={user} />
+
+        <ProfileCard
+          user={user}
+        />
 
         <div className="grid gap-8 xl:grid-cols-2">
-          <UserInfo user={user} />
 
-          <AssignedAssets />
+          <UserInfo
+            user={user}
+          />
+
+          <AssignedAssets
+            userId={user.id}
+          />
+
         </div>
 
         <div className="grid gap-8 xl:grid-cols-2">
-          <UserGroups />
 
-          <OpenTickets />
+          <UserGroups
+            userId={user.id}
+          />
+
+          <OpenTickets userId={user.id} />
+
+
         </div>
 
-        <SecurityTimeline />
+        <SecurityTimeline
+  userId={user.id}
+  userCreatedAt={user.createdAt}
+/>
+
       </section>
     </main>
   );
