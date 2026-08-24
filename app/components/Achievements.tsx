@@ -2,22 +2,26 @@ const achievements = [
   {
     number: "6+",
     title: "Enterprise Projects",
-    description: "Designed and developed enterprise-focused portfolio projects.",
+    description:
+      "A growing portfolio of completed systems, technical modules, prototypes, and upcoming enterprise projects.",
   },
   {
     number: "2",
-    title: "Professional Experience",
-    description: "Experience across IT Support and HR Operations.",
+    title: "Professional Roles",
+    description:
+      "Practical experience across IT Support and HR Operations.",
   },
   {
     number: "12+",
     title: "Technical Skills",
-    description: "Microsoft 365, Active Directory, SQL, Networking and more.",
+    description:
+      "Microsoft 365, Active Directory, SQL, Networking, Windows Server and more.",
   },
   {
     number: "1000+",
     title: "Employees Supported",
-    description: "Supported HR operations and employee services at scale.",
+    description:
+      "Supported HR operations, employee services and enterprise workflows at scale.",
   },
 ];
 
@@ -28,7 +32,6 @@ export default function Achievements() {
       className="bg-black px-8 py-24 text-white"
     >
       <div className="mx-auto max-w-6xl">
-
         <p className="mb-3 uppercase tracking-[0.3em] text-blue-500">
           ACHIEVEMENTS
         </p>
@@ -38,7 +41,6 @@ export default function Achievements() {
         </h2>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-
           {achievements.map((item) => (
             <div
               key={item.title}
@@ -55,12 +57,9 @@ export default function Achievements() {
               <p className="mt-3 text-sm leading-6 text-gray-400">
                 {item.description}
               </p>
-
             </div>
           ))}
-
         </div>
-
       </div>
     </section>
   );

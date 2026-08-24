@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Enterprise IT Asset System",
+  title: "Shahad Alghamdi | Information Systems Portfolio",
   description:
-    "Enterprise IT Management and Asset Tracking System",
+    "Portfolio of Shahad Alghamdi, an Information Systems graduate focused on enterprise IT systems, infrastructure, IT support, Microsoft 365, Active Directory, SQL, and business technology solutions.",
 };
 
 export default function RootLayout({
@@ -30,7 +30,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-full flex-col">
         <RouteGuard>{children}</RouteGuard>
       </body>
     </html>

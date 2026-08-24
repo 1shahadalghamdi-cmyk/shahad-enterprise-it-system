@@ -170,7 +170,6 @@ function isRouteAllowed(
     // MICROSOFT 365
     // ---------------------------------------------------------
 
-    // Main Microsoft 365 service pages
     if (
       pathname === "/m365/users" ||
       pathname === "/m365/licenses" ||
@@ -285,18 +284,6 @@ function isRouteAllowed(
       return true;
     }
 
-    // Admin-only IAM pages:
-    //
-    // /iam/users/new
-    // /iam/users/[id]/edit
-    // /iam/groups/new
-    // /iam/groups/[id]/edit
-    // /iam/roles
-    // /iam/password-policy
-    //
-    // None of these reach a true condition
-    // for IT Support.
-
     // ---------------------------------------------------------
     // NETWORK
     // ---------------------------------------------------------
@@ -359,14 +346,23 @@ export default function RouteGuard({
   ] = useState(true);
 
   useEffect(() => {
-    // Login page must always be accessible
+    // =========================================================
+    // PUBLIC ROUTES
+    // Portfolio and login do NOT require authentication
+    // =========================================================
+
     if (
+      pathname === "/" ||
       pathname === "/login"
     ) {
       setIsAllowed(true);
       setIsChecking(false);
       return;
     }
+
+    // =========================================================
+    // PROTECTED ROUTES
+    // =========================================================
 
     const savedUser =
       window.localStorage.getItem(
