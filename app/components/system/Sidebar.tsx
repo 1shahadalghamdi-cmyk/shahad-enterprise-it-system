@@ -224,7 +224,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="relative flex min-h-screen w-64 flex-col border-r border-white/10 bg-zinc-900 p-6 text-white">
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-zinc-900 p-6 text-white">
       <div className="mb-8">
         <p className="text-sm uppercase tracking-[0.3em] text-blue-500">
           Enterprise IT
@@ -375,7 +375,7 @@ export default function Sidebar() {
         )}
       </div>
 
-      <nav className="space-y-2">
+      <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
         {visibleLinks.map((link) => (
           <Link
             key={link.href}
@@ -387,7 +387,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto pt-8">
+      <div className="shrink-0 border-t border-white/10 pt-4">
         <button
           type="button"
           onClick={handleLogout}
