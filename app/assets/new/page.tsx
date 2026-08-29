@@ -42,6 +42,34 @@ type Asset = {
   status: string;
 };
 
+function generateNextAssetId(
+  assets: Asset[],
+) {
+  const existingNumbers = assets
+    .map((asset) => {
+      const match = asset.id.match(
+        /^AST-(\d{1,3})$/,
+      );
+
+      return match
+        ? Number(match[1])
+        : 0;
+    })
+    .filter((number) => number > 0);
+
+  const highestNumber =
+    existingNumbers.length > 0
+      ? Math.max(...existingNumbers)
+      : 0;
+
+  const nextNumber = highestNumber + 1;
+
+  return `AST-${String(nextNumber).padStart(
+    3,
+    "0",
+  )}`;
+}
+
 export default function NewAssetPage() {
   const router = useRouter();
 
@@ -76,7 +104,9 @@ export default function NewAssetPage() {
 
     try {
       const parsedUser =
-        JSON.parse(savedCurrentUser) as CurrentUser;
+        JSON.parse(
+          savedCurrentUser,
+        ) as CurrentUser;
 
       if (
         parsedUser.role !== "IT Admin" &&
@@ -89,7 +119,9 @@ export default function NewAssetPage() {
       setCurrentUser(parsedUser);
       setIsAuthorized(true);
     } catch {
-      window.localStorage.removeItem("currentUser");
+      window.localStorage.removeItem(
+        "currentUser",
+      );
       router.replace("/login");
     }
   }, [router]);
@@ -97,7 +129,8 @@ export default function NewAssetPage() {
   const employees = useMemo<Employee[]>(
     () =>
       enterpriseEmployees.filter(
-        (employee) => employee.status === "Active",
+        (employee) =>
+          employee.status === "Active",
       ),
     [enterpriseEmployees],
   );
@@ -105,7 +138,8 @@ export default function NewAssetPage() {
   const selectedEmployee = useMemo(
     () =>
       employees.find(
-        (employee) => employee.id === assignedTo,
+        (employee) =>
+          employee.id === assignedTo,
       ) ?? null,
     [assignedTo, employees],
   );
@@ -118,7 +152,8 @@ export default function NewAssetPage() {
 
     const employee =
       employees.find(
-        (item) => item.id === employeeId,
+        (item) =>
+          item.id === employeeId,
       ) ?? null;
 
     if (employee) {
@@ -138,35 +173,51 @@ export default function NewAssetPage() {
       return;
     }
 
-    const cleanAssetName = assetName.trim();
-    const cleanCategory = category.trim();
-    const cleanDepartment = department.trim();
+    const cleanAssetName =
+      assetName.trim();
+
+    const cleanCategory =
+      category.trim();
+
+    const cleanDepartment =
+      department.trim();
 
     if (!cleanAssetName) {
-      setFormError("Asset name is required.");
+      setFormError(
+        "Asset name is required.",
+      );
       return;
     }
 
     if (!cleanCategory) {
-      setFormError("Category is required.");
+      setFormError(
+        "Category is required.",
+      );
       return;
     }
 
     if (!cleanDepartment) {
-      setFormError("Department is required.");
+      setFormError(
+        "Department is required.",
+      );
       return;
     }
 
     const savedAssets = JSON.parse(
-      window.localStorage.getItem("assets") || "[]",
+      window.localStorage.getItem(
+        "assets",
+      ) || "[]",
     ) as Asset[];
 
     const newAsset: Asset = {
-      id: `AST-${Date.now()}`,
+      id: generateNextAssetId(
+        savedAssets,
+      ),
       name: cleanAssetName,
       category: cleanCategory,
       department: cleanDepartment,
-      assignedTo: selectedEmployee?.id || "",
+      assignedTo:
+        selectedEmployee?.id || "",
       status: selectedEmployee
         ? "Assigned"
         : "Available",
@@ -218,8 +269,9 @@ export default function NewAssetPage() {
         </h1>
 
         <p className="mb-10 text-gray-400">
-          Assign the asset to an active employee or
-          leave it unassigned and available.
+          Assign the asset to an active
+          employee or leave it unassigned
+          and available.
         </p>
 
         <form
@@ -241,7 +293,9 @@ export default function NewAssetPage() {
               type="text"
               value={assetName}
               onChange={(event) =>
-                setAssetName(event.target.value)
+                setAssetName(
+                  event.target.value,
+                )
               }
               required
               placeholder="Dell Latitude 5420"
@@ -258,7 +312,9 @@ export default function NewAssetPage() {
               type="text"
               value={category}
               onChange={(event) =>
-                setCategory(event.target.value)
+                setCategory(
+                  event.target.value,
+                )
               }
               required
               placeholder="Laptop"
@@ -284,21 +340,27 @@ export default function NewAssetPage() {
                 Unassigned
               </option>
 
-              {employees.map((employee) => (
-                <option
-                  key={employee.id}
-                  value={employee.id}
-                >
-                  {employee.name} — {employee.id} —{" "}
-                  {employee.department}
-                </option>
-              ))}
+              {employees.map(
+                (employee) => (
+                  <option
+                    key={employee.id}
+                    value={employee.id}
+                  >
+                    {employee.name} —{" "}
+                    {employee.id} —{" "}
+                    {
+                      employee.department
+                    }
+                  </option>
+                ),
+              )}
             </select>
 
             {employees.length === 0 && (
               <p className="mt-2 text-sm text-yellow-400">
-                No active employees are available.
-                Add or activate an employee first.
+                No active employees are
+                available. Add or activate
+                an employee first.
               </p>
             )}
           </div>
@@ -312,9 +374,13 @@ export default function NewAssetPage() {
               type="text"
               value={department}
               onChange={(event) =>
-                setDepartment(event.target.value)
+                setDepartment(
+                  event.target.value,
+                )
               }
-              readOnly={Boolean(selectedEmployee)}
+              readOnly={Boolean(
+                selectedEmployee,
+              )}
               required
               placeholder={
                 selectedEmployee
@@ -330,7 +396,8 @@ export default function NewAssetPage() {
 
             {selectedEmployee && (
               <p className="mt-2 text-sm text-gray-500">
-                Department is linked automatically to{" "}
+                Department is linked
+                automatically to{" "}
                 {selectedEmployee.name}.
               </p>
             )}
