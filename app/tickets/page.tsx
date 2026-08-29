@@ -237,7 +237,7 @@ export default function TicketsPage() {
             />
 
             <StatCard
-              title="Open Tickets"
+              title="Active Tickets"
               value={openCount.toString()}
             />
 

@@ -480,9 +480,9 @@ export default function DashboardPage() {
 
             <Card
               icon="🚨"
-              title="Open Tickets"
+              title="Active Tickets"
               value={openTicketCount.toString()}
-              detail="Pending resolution"
+              detail="Open or in progress"
               accent="red"
             />
 
