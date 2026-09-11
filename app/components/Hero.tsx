@@ -35,12 +35,13 @@ export default function Hero() {
           </a>
 
           <a
-            href="/Shahad_Alghamdi_CV.pdf"
-            download
-            className="rounded-full border border-blue-500/50 bg-blue-500/10 px-8 py-4 font-semibold text-blue-400 transition hover:-translate-y-1 hover:bg-blue-600 hover:text-white"
-          >
-            Download CV ↓
-          </a>
+  href="/Shahad_IS_Resume.pdf"
+  download="Shahad_IS_Resume.pdf"
+  className="rounded-full border border-blue-500/50 bg-blue-500/10 px-8 py-4 font-semibold text-blue-400 transition hover:-translate-y-1 hover:bg-blue-600 hover:text-white"
+>
+  Download CV ↓
+</a>
+
 
           <a
             href="#contact"
