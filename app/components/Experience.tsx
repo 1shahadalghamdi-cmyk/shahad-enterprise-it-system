@@ -32,29 +32,41 @@ export default function Experience() {
               </div>
 
               <span className="h-fit rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-400">
-                2026 – Present
+                May 2026 – Present
               </span>
             </div>
 
             <ul className="mt-6 space-y-3 leading-7 text-gray-400">
               <li>
-                ✔ Manage employee records and HR workflows using Odoo ERP.
+                ✔ Manage employee data and large-scale administrative workflows
+                through Odoo ERP and enterprise platforms supporting 1,000+
+                employees.
               </li>
 
               <li>
-                ✔ Process employee services through Qiwa, Muqeem, and Absher.
+                ✔ Maintain employee personnel documents in SharePoint,
+                supporting centralized digital recordkeeping.
               </li>
 
               <li>
-                ✔ Administer health insurance operations for employees and dependents.
+                ✔ Process employee transactions through Qiwa, Muqeem, and
+                Absher.
               </li>
 
               <li>
-                ✔ Support payroll inputs, deductions, employee documentation, and compliance processes.
+                ✔ Manage health insurance operations for 1,000+ employees and
+                dependents.
               </li>
 
               <li>
-                ✔ Support recruitment, onboarding, and high-volume employee administration.
+                ✔ Support payroll-related inputs, deductions, employee
+                documentation, and compliance workflows.
+              </li>
+
+              <li>
+                ✔ Collaborated with the IT department on implementing a new
+                employee attendance application and translating HR requirements
+                into system workflows.
               </li>
             </ul>
           </div>
@@ -83,24 +95,39 @@ export default function Experience() {
 
             <ul className="mt-6 space-y-3 leading-7 text-gray-400">
               <li>
-                ✔ Provided first-level support for hardware, software, and network issues.
+                ✔ Resolved hardware, software, and network support tickets,
+                achieving a 95% resolution rate.
               </li>
 
               <li>
-                ✔ Managed Active Directory users, groups, access permissions, and account lifecycle tasks.
+                ✔ Reduced average issue resolution time by 20% through
+                proactive troubleshooting and process improvements.
               </li>
 
               <li>
-                ✔ Supported Microsoft 365 accounts, Teams, OneDrive, and user services.
+                ✔ Managed Active Directory user accounts and access permissions.
               </li>
 
               <li>
-                ✔ Installed and configured Windows workstations and supported LAN connectivity.
+                ✔ Configured and supported Microsoft 365 services, including
+                Teams, OneDrive, and email, for 50+ users.
               </li>
 
               <li>
-                ✔ Documented IT procedures, troubleshooting processes, and technical workflows.
+                ✔ Installed and configured Windows operating systems based on
+                departmental requirements.
               </li>
+
+              <li>
+                ✔ Created IT workflow process maps and technical documentation
+                to improve consistency and support faster onboarding.
+              </li>
+
+              <li>
+  ✔ Supported LAN connectivity, network devices, data center operations,
+  surveillance cameras, and asset tracking and tag-based systems.
+</li>
+
             </ul>
 
             <div className="mt-6 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-5">
@@ -110,12 +137,11 @@ export default function Experience() {
 
               <p className="leading-7 text-gray-300">
                 During my internship at{" "}
-                <strong>Zamil Plastic Industries</strong>, I observed an
-                operational challenge in tracking IT assets and their
-                assignments. This experience inspired me to design and build
-                the{" "}
+                <strong>Zamil Plastic Industries</strong>, I identified a real
+                operational challenge related to IT asset tracking and employee
+                assignments. This experience inspired me to design and build the{" "}
                 <span className="font-semibold text-white">
-                  Enterprise IT Asset Management System
+                  Enterprise IT Asset Management & Helpdesk System
                 </span>
                 , now showcased as the flagship project in this portfolio.
               </p>
