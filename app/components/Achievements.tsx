@@ -1,27 +1,27 @@
 const achievements = [
   {
     number: "6+",
-    title: "Enterprise Projects",
+    title: "Portfolio Projects",
     description:
-      "A growing portfolio of completed systems, technical modules, prototypes, and upcoming enterprise projects.",
+      "A growing portfolio of completed systems, technical modules, prototypes, and upcoming projects.",
   },
   {
     number: "2",
     title: "Professional Roles",
     description:
-      "Practical experience across IT Support and HR Operations.",
+      "Hands-on experience across IT Support and business operations.",
   },
   {
-    number: "12+",
+    number: "16",
     title: "Technical Skills",
     description:
-      "Microsoft 365, Active Directory, SQL, Networking, Windows Server and more.",
+      "Enterprise IT, systems administration, networking, data, support, and modern web technologies.",
   },
   {
     number: "1000+",
     title: "Employees Supported",
     description:
-      "Supported HR operations, employee services and enterprise workflows at scale.",
+      "Supported large-scale employee services, records, insurance, and enterprise workflows.",
   },
 ];
 

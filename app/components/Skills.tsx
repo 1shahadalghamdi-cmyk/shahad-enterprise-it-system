@@ -3,19 +3,19 @@ export default function Skills() {
     "Active Directory",
     "Microsoft 365",
     "Windows Server",
+    "SharePoint",
     "Cisco Networking",
+    "IT Support",
+    "PowerShell",
     "SQL",
     "Power BI",
     "Odoo ERP",
-    "IT Support",
+    "RBAC",
     "TypeScript",
     "JavaScript",
     "Next.js",
     "React",
     "Tailwind CSS",
-    "HTML & CSS",
-    "RBAC",
-    "Figma",
   ];
 
   return (

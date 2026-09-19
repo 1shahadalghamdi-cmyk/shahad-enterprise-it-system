@@ -24,7 +24,8 @@ export default function FeaturedProject() {
     },
     {
       title: "Infrastructure",
-      description: "Network, Windows Server & M365",
+      description:
+        "Network, Windows Server & Microsoft 365",
     },
   ];
 
@@ -54,15 +55,20 @@ export default function FeaturedProject() {
               </h2>
 
               <h3 className="mt-6 text-xl font-semibold text-gray-200">
-                Solving real IT operations and asset tracking challenges
+                Solving real IT operations and asset
+                tracking challenges
               </h3>
 
               <p className="mt-5 max-w-xl leading-8 text-gray-400">
-                Inspired by a real operational challenge observed during my IT
-                internship at Zamil Plastic Industries. I designed and built an
-                enterprise IT system that combines asset management, helpdesk
-                workflows, maintenance, identity and access management,
-                Microsoft 365 administration, infrastructure monitoring, and
+                Inspired by an operational challenge I
+                observed during my IT internship at
+                Zamil Plastic Industries. I designed
+                and built an enterprise IT system that
+                brings together asset management,
+                helpdesk workflows, maintenance,
+                identity and access management,
+                Microsoft 365 administration,
+                infrastructure monitoring, and
                 disaster recovery concepts.
               </p>
 
@@ -127,22 +133,25 @@ export default function FeaturedProject() {
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {["IT Admin", "IT Support", "Employee"].map(
-                      (role) => (
-                        <span
-                          key={role}
-                          className="rounded-full border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-300"
-                        >
-                          {role}
-                        </span>
-                      ),
-                    )}
+                    {[
+                      "IT Admin",
+                      "IT Support",
+                      "Employee",
+                    ].map((role) => (
+                      <span
+                        key={role}
+                        className="rounded-full border border-white/10 bg-black/40 px-3 py-2 text-xs text-gray-300"
+                      >
+                        {role}
+                      </span>
+                    ))}
                   </div>
                 </div>
 
                 <p className="mt-4 text-xs leading-5 text-gray-600">
-                  Front-end enterprise prototype using browser storage for
-                  simulated application data.
+                  Front-end enterprise prototype using
+                  browser storage for application data
+                  and workflow state.
                 </p>
               </div>
             </div>
