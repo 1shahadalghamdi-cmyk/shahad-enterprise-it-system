@@ -22,17 +22,16 @@ export default function About() {
 
             <p className="mt-6 leading-8 text-gray-400">
               My background combines technical knowledge with a strong
-              understanding of organizational processes. I have hands-on
-              experience with Active Directory, Microsoft 365, Windows
-              environments, IT troubleshooting, Odoo ERP, and enterprise
-              business platforms.
+              understanding of business processes. I have hands-on experience
+              with Active Directory, Microsoft 365, Windows environments,
+              IT troubleshooting, Odoo ERP, SharePoint, and enterprise
+              administration workflows.
             </p>
 
             <p className="mt-6 leading-8 text-gray-400">
-              I enjoy identifying operational challenges, analyzing how
-              processes work, and transforming business needs into structured
-              digital solutions that improve efficiency, visibility, and user
-              experience.
+              I focus on understanding operational challenges and turning
+              business requirements into structured digital solutions that
+              improve efficiency, visibility, and user experience.
             </p>
           </div>
 
@@ -82,3 +81,4 @@ export default function About() {
     </section>
   );
 }
+

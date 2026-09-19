@@ -22,8 +22,8 @@ export default function Hero() {
         </h2>
 
         <p className="mx-auto mt-8 max-w-2xl text-lg leading-8 text-gray-400">
-          Building practical enterprise IT solutions across infrastructure,
-          systems administration, data, and modern business applications.
+          Building practical IT and business systems across infrastructure,
+          support, data, and modern enterprise applications.
         </p>
 
         <div className="mt-10 flex flex-wrap justify-center gap-4">
@@ -35,13 +35,12 @@ export default function Hero() {
           </a>
 
           <a
-  href="/Shahad_IS_Resume.pdf"
-  download="Shahad_IS_Resume.pdf"
-  className="rounded-full border border-blue-500/50 bg-blue-500/10 px-8 py-4 font-semibold text-blue-400 transition hover:-translate-y-1 hover:bg-blue-600 hover:text-white"
->
-  Download CV ↓
-</a>
-
+            href="/Shahad_IS_Resume.pdf"
+            download="Shahad_IS_Resume.pdf"
+            className="rounded-full border border-blue-500/50 bg-blue-500/10 px-8 py-4 font-semibold text-blue-400 transition hover:-translate-y-1 hover:bg-blue-600 hover:text-white"
+          >
+            Download CV ↓
+          </a>
 
           <a
             href="#contact"
