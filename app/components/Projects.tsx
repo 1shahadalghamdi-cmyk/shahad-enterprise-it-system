@@ -19,26 +19,26 @@ const projects: Project[] = [
   {
     title: "Enterprise IT Asset Management",
     description:
-      "Enterprise system for asset tracking, employee assignments, helpdesk tickets, maintenance, access control, infrastructure monitoring, and recovery operations.",
+      "Enterprise IT operations platform for asset tracking, employee assignments, helpdesk workflows, maintenance, access management, infrastructure monitoring, and recovery operations.",
     status: "Completed",
     caseStudyHref: "/projects/asset-management",
   },
   {
     title: "Active Directory Administration",
     description:
-      "Enterprise IAM simulation covering users, groups, roles, permissions, password policies, and access workflows.",
+      "Identity and access management module covering users, groups, roles, permissions, password policies, and access workflows.",
     status: "Built Module",
   },
   {
     title: "Microsoft 365 Administration",
     description:
-      "Enterprise administration simulation for Microsoft 365 users, licenses, Exchange Online, Teams, OneDrive, and security controls.",
+      "Microsoft 365 administration module covering users, licenses, Exchange Online, Teams, OneDrive, and security controls.",
     status: "Built Module",
   },
   {
     title: "NOVA Enterprise E-Commerce",
     description:
-      "End-to-end retail platform featuring a professional product catalog, product detail pages, dynamic inventory, wishlist, cart, promo codes, test-mode checkout, delivery location, order tracking, customer accounts, administration dashboard, and customer support workflows.",
+      "End-to-end retail platform featuring product catalog management, product detail pages, dynamic inventory, wishlist, cart, promo codes, test-mode checkout, delivery location, order tracking, customer accounts, admin dashboard, and customer support workflows.",
     status: "Completed",
     liveHref:
       "https://nova-ecommerce-shahad.vercel.app",
@@ -48,13 +48,13 @@ const projects: Project[] = [
   {
     title: "SQL Inventory System",
     description:
-      "Planned relational database project covering database design, SQL queries, inventory relationships, and reporting.",
+      "Relational inventory management project focused on database design, SQL queries, data relationships, transactions, and reporting.",
     status: "Upcoming",
   },
   {
     title: "AI Helpdesk Ticket Classifier",
     description:
-      "Helpdesk classification prototype for analyzing ticket information and recommending categories, priorities, and support routing.",
+      "AI-assisted helpdesk prototype for analyzing support tickets and recommending categories, priorities, and routing decisions.",
     status: "Prototype",
   },
 ];
@@ -174,3 +174,4 @@ export default function Projects() {
     </section>
   );
 }
+
