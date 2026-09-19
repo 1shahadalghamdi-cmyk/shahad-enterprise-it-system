@@ -12,7 +12,6 @@ type Project = {
   status: ProjectStatus;
   caseStudyHref?: string;
   liveHref?: string;
-  githubHref?: string;
 };
 
 const projects: Project[] = [
@@ -42,8 +41,6 @@ const projects: Project[] = [
     status: "Completed",
     liveHref:
       "https://nova-ecommerce-shahad.vercel.app",
-    githubHref:
-      "https://github.com/1shahadalghamdi-cmyk/shahad-ecommerce",
   },
   {
     title: "SQL Inventory System",
@@ -134,18 +131,6 @@ export default function Projects() {
                       className="inline-flex rounded-full bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
                     >
                       View Live Project →
-                    </a>
-                  )}
-
-                {project.status === "Completed" &&
-                  project.githubHref && (
-                    <a
-                      href={project.githubHref}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex rounded-full border border-white/15 bg-white/5 px-6 py-3 font-semibold text-gray-200 transition hover:border-blue-500/60 hover:text-white"
-                    >
-                      GitHub →
                     </a>
                   )}
 
