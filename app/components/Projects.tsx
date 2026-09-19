@@ -10,8 +10,9 @@ type Project = {
   title: string;
   description: string;
   status: ProjectStatus;
-  href?: string;
-  external?: boolean;
+  caseStudyHref?: string;
+  liveHref?: string;
+  githubHref?: string;
 };
 
 const projects: Project[] = [
@@ -20,7 +21,7 @@ const projects: Project[] = [
     description:
       "Enterprise system for asset tracking, employee assignments, helpdesk tickets, maintenance, access control, infrastructure monitoring, and recovery operations.",
     status: "Completed",
-    href: "/projects/asset-management",
+    caseStudyHref: "/projects/asset-management",
   },
   {
     title: "Active Directory Administration",
@@ -35,12 +36,14 @@ const projects: Project[] = [
     status: "Built Module",
   },
   {
-    title: "Enterprise E-Commerce",
+    title: "NOVA Enterprise E-Commerce",
     description:
-      "Full e-commerce platform featuring product management, dynamic inventory, shopping cart, checkout simulation, order processing, admin authentication, and order management.",
+      "End-to-end retail platform featuring a professional product catalog, product detail pages, dynamic inventory, wishlist, cart, promo codes, test-mode checkout, delivery location, order tracking, customer accounts, administration dashboard, and customer support workflows.",
     status: "Completed",
-    href: "https://shahad-ecommerce.vercel.app",
-    external: true,
+    liveHref:
+      "https://nova-ecommerce-shahad.vercel.app",
+    githubHref:
+      "https://github.com/1shahadalghamdi-cmyk/shahad-ecommerce",
   },
   {
     title: "SQL Inventory System",
@@ -100,7 +103,7 @@ export default function Projects() {
 
                 <span
                   className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusStyle(
-                    project.status
+                    project.status,
                   )}`}
                 >
                   {project.status}
@@ -111,12 +114,21 @@ export default function Projects() {
                 {project.description}
               </p>
 
-              <div className="mt-auto pt-8">
+              <div className="mt-auto flex flex-wrap gap-3 pt-8">
                 {project.status === "Completed" &&
-                  project.href &&
-                  project.external && (
+                  project.caseStudyHref && (
+                    <Link
+                      href={project.caseStudyHref}
+                      className="inline-flex rounded-full bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
+                    >
+                      View Case Study →
+                    </Link>
+                  )}
+
+                {project.status === "Completed" &&
+                  project.liveHref && (
                     <a
-                      href={project.href}
+                      href={project.liveHref}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex rounded-full bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
@@ -126,14 +138,15 @@ export default function Projects() {
                   )}
 
                 {project.status === "Completed" &&
-                  project.href &&
-                  !project.external && (
-                    <Link
-                      href={project.href}
-                      className="inline-flex rounded-full bg-blue-600 px-6 py-3 font-semibold transition hover:bg-blue-500"
+                  project.githubHref && (
+                    <a
+                      href={project.githubHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex rounded-full border border-white/15 bg-white/5 px-6 py-3 font-semibold text-gray-200 transition hover:border-blue-500/60 hover:text-white"
                     >
-                      View Case Study →
-                    </Link>
+                      GitHub →
+                    </a>
                   )}
 
                 {project.status === "Built Module" && (
