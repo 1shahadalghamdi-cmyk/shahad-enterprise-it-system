@@ -37,7 +37,7 @@ const projects: Project[] = [
   {
     title: "NOVA Enterprise E-Commerce",
     description:
-      "End-to-end retail platform featuring product catalog management, product detail pages, dynamic inventory, wishlist, cart, promo codes, test-mode checkout, delivery location, order tracking, customer accounts, admin dashboard, and customer support workflows.",
+      "End-to-end e-commerce platform featuring product catalog and inventory management, product detail pages, wishlist, session-based cart, promo codes, guest checkout, test-mode card payments, cash on delivery, automatic delivery-location capture, order tracking, customer accounts, admin order management, and customer support workflows.",
     status: "Completed",
     liveHref:
       "https://nova-ecommerce-shahad.vercel.app",
@@ -159,4 +159,3 @@ export default function Projects() {
     </section>
   );
 }
-
