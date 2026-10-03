@@ -9,7 +9,7 @@ const achievements = [
     number: "2",
     title: "Professional Roles",
     description:
-      "Hands-on experience across IT Support and business operations.",
+      "Hands-on experience across IT support, enterprise systems, and business operations.",
   },
   {
     number: "16",
@@ -21,7 +21,7 @@ const achievements = [
     number: "1000+",
     title: "Employees Supported",
     description:
-      "Supported large-scale employee services, records, insurance, and enterprise workflows.",
+      "Supporting large-scale employee services, digital records, insurance, and enterprise workflows.",
   },
 ];
 

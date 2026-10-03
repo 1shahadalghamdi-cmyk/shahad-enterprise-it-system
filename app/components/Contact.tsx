@@ -14,8 +14,9 @@ export default function Contact() {
         </h2>
 
         <p className="mt-6 max-w-2xl text-lg leading-8 text-gray-400">
-          Interested in opportunities across IT Systems, IT Support,
-          enterprise technology, and business applications.
+          Open to opportunities across IT Systems, IT Support,
+          enterprise technology, and business applications in Saudi Arabia
+          and Bahrain.
         </p>
 
         <div className="mt-12 grid gap-5 md:grid-cols-2">
